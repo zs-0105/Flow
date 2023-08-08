@@ -46,10 +46,11 @@
   
   /* 设置列表样式 */
   ul, ol {
-    margin-bottom: 20px;
+    margin: 0;
+    padding: 0;
   }
   li {
-    line-height: 1.5;
+    list-style: none;
   }
   
   /* 设置表格样式 */
@@ -127,7 +128,7 @@
  ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
-  background-color: rgba(0,0,0,.2);
+  background-color: rgba(0,0,0,.1);
 }
 
 /*定义滚动条轨道
@@ -144,9 +145,19 @@
 {
   border-radius:10px;
   -webkit-box-shadow:inset 0 0 6px rgba(0,0,0,0);
-  background-color: #b3b3b3;
+  background-color: #d7d2d2;
 }
 .container{
   width: 100%;
   height: 100%;
+}
+/* 单行文字溢出省略 */
+.ellipsis{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 禁用字体颜色 */
+.disableColor{
+  color: #ccc !important;
 }
