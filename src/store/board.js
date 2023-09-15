@@ -4,19 +4,20 @@ const board = {
     namespaced: true,
     state: {
       // 状态
-        elements: {},
+        nodes: {},
         boardBkColor: '#fff',
         boardWidth: 1500,
         boardHight: 840
     },
     mutations: {
       // 修改状态的方法
-      addElement(state, data) {
-        Vue.set(state.elements, data.id, data)
+      addNode(state, data) {
+        Vue.set(state.nodes, data.id, data)
       },
-      updateElInfo(state, data) {
+      updateNodeInfo(state, data) {
+        console.log(data);
         let {id, attr, value} = data
-        state.elements[id][attr] = value
+        state.nodes[id][attr] = value
       },
     },
     actions: {

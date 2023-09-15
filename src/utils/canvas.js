@@ -16,6 +16,44 @@ export default {
         const canvasImg = canvas.toDataURL('image/png');
       };
     },
+    drawEditBox: (selector, info) => {
+      let canvas
+      let {width, height} = info
+      if(typeof selector == 'string'){
+        canvas = document.querySelector(selector)
+      }else {
+        canvas = selector
+      }
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d');
+      let offset = 0; // 虚线偏移
+      ctx.translate(0.5, 0.5)
+      function draw() {
+        // Clear the canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+        // Update the dash offset for flowing effect
+        offset -= 0.1;
+  
+        // Set the dash pattern
+        ctx.strokeStyle = '#067BEF';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]); // Dash pattern
+        ctx.lineDashOffset = -offset; // Apply the offset
+        // Draw the square
+        ctx.strokeRect(
+          0,
+          0,
+          width,
+          height
+        );
+  
+        // Request animation frame for smooth animation
+        requestAnimationFrame(draw);
+      }
+      draw();
+    },
     // 清空画布内容
     clearCanvas: (canvas) => {
       const ctx = canvas.getContext('2d');

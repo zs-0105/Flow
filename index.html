@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 400px;
+      height: 400px;
+    }
+  </style>
+  <title>Flowing Dashed Border Square</title>
+</head>
+<body>
+  <canvas id="canvas" width="400px" height="400px"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const sideLength = 300; // 正方形边长
+    let offset = 0; // 虚线偏移
+    ctx.translate(0.5, 0.5)
+    function draw() {
+      // Clear the canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Update the dash offset for flowing effect
+      offset -= 0.1;
+
+      // Set the dash pattern
+      ctx.strokeStyle = '#067BEF';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]); // Dash pattern
+      ctx.lineDashOffset = -offset; // Apply the offset
+        console.log(canvas.width)
+      // Draw the square
+      ctx.strokeRect(
+        0,
+        0,
+        sideLength,
+        sideLength
+      );
+
+      // Request animation frame for smooth animation
+      requestAnimationFrame(draw);
+    }
+
+    // Set canvas siz
+
+    // Start drawing
+    draw();
+  </script>
+</body>
+</html>
+
+

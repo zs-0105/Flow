@@ -179,12 +179,9 @@ import { mapState } from 'vuex';
             this.showOpt[ref] = false
         },
         elementMouseDown (event, info) {
-            this.$store.commit('elements/setIsElMouseDown', true);
-            this.$store.commit('elements/setdragElInfo', info);
+            this.$store.commit('nodes/setIsElMouseDown', true);
+            this.$store.commit('nodes/setdragElInfo', info);
         },
-        // elementMouseUp (event, info) {
-            
-        // },
     },
   }
 </script>

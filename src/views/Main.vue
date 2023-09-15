@@ -33,21 +33,9 @@ import { mapState } from 'vuex';
       DrawingBoard
     },
     mounted() {
-      // document.documentElement.addEventListener('mouseup',()=>{  
-      //   if(this.showDragEl) {
-      //     let isContained = this.isElementContained(this.$refs.board.$refs.paneR, this.$refs.dragCnavas)
-      //     console.log(isContained);
-      //     if(isContained) {
-      //       // 添加元素
-      //     }
-      //     this.$store.commit('elements/setIsElMouseDown', false);
-      //     this.$store.commit('elements/setdragElInfo', '');
-      //     this.showDragEl = false
-      //   }
-      // })
     },
     computed: {
-      ...mapState('elements', ['isElMouseDown','dragElInfo'])
+      ...mapState('nodes', ['isElMouseDown','dragElInfo'])
     },
     data () {
       return {
@@ -59,8 +47,6 @@ import { mapState } from 'vuex';
         if(this.isElMouseDown) {
           if(!this.showDragEl) {
             this.showDragEl = true
-            // this.$refs.dragCnavas.width = 100
-            // this.$refs.dragCnavas.height = 100
             canvas[this.dragElInfo.funName]('.dragCnavas')
           }
           requestAnimationFrame(() => {
@@ -71,17 +57,17 @@ import { mapState } from 'vuex';
       },
       mouseup(event) {
         if(this.showDragEl) {
-          let isContained = this.areElementsOverlapping(this.$refs.board.$refs.paneR, this.$refs.dragCnavas)
+          let isContained = this.isElementOverlapping(this.$refs.board.$refs.paneR, this.$refs.dragCnavas)
           if(isContained) {
             // 添加元素
             this.$bus.$emit('creatElement', this.dragElInfo, this.$refs.dragCnavas, event)
           }
-          this.$store.commit('elements/setIsElMouseDown', false);
-          this.$store.commit('elements/setdragElInfo', '');
+          this.$store.commit('nodes/setIsElMouseDown', false);
+          this.$store.commit('nodes/setdragElInfo', '');
           this.showDragEl = false
         }
       },
-      areElementsOverlapping(element1, element2) {
+      isElementOverlapping(element1, element2) {
         const rect1 = element1.getBoundingClientRect();
         const rect2 = element2.getBoundingClientRect();
 

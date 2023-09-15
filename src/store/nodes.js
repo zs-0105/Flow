@@ -1,5 +1,5 @@
 // 拖拽元素列表状态管理
-const elements = {
+const nodes = {
     namespaced: true,
     state: {
       // 状态
@@ -23,4 +23,4 @@ const elements = {
     }
   };
   
-export default elements;
+export default nodes;
