@@ -33,13 +33,17 @@ import { mapState } from 'vuex';
       DrawingBoard
     },
     mounted() {
+      document.addEventListener('dragstart', (event) => {
+        event.preventDefault();//阻止默认禁用光标的出现
+      });
     },
     computed: {
       ...mapState('nodes', ['isElMouseDown','dragElInfo'])
     },
     data () {
       return {
-        showDragEl: false
+        showDragEl: false,
+        animationFrameId: null
       }
     },
     methods: {
@@ -49,7 +53,8 @@ import { mapState } from 'vuex';
             this.showDragEl = true
             canvas[this.dragElInfo.funName]('.dragCnavas')
           }
-          requestAnimationFrame(() => {
+          if(this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
+          this.animationFrameId = requestAnimationFrame(() => {
             this.$refs.dragCnavas.style.top = event.clientY - this.$refs.dragCnavas.height / 2 + 'px'
             this.$refs.dragCnavas.style.left = event.clientX - this.$refs.dragCnavas.width / 2 + 'px'
           });

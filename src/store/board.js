@@ -1,5 +1,6 @@
 // 拖拽元素列表状态管理
 import Vue from 'vue';
+import canvas from '@/utils/canvas';
 const board = {
     namespaced: true,
     state: {
@@ -15,10 +16,21 @@ const board = {
         Vue.set(state.nodes, data.id, data)
       },
       updateNodeInfo(state, data) {
-        console.log(data);
-        let {id, attr, value} = data
+        let { id, attr, value } = data
         state.nodes[id][attr] = value
       },
+      batchUpdateNodeInfo(state, data) {
+        let { ids, attr, value } = data
+        for(let id of ids) {
+            let nodeInfo = state.nodes[id]
+            let funName = nodeInfo.funName
+            let selector = '#' + id
+            nodeInfo[attr] = value
+            requestAnimationFrame(() => {
+              canvas[funName](selector, nodeInfo)
+            })
+        }
+      }
     },
     actions: {
       // 异步操作和业务逻辑

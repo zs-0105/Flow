@@ -4,17 +4,7 @@
       @mousemove="nodeMouseMove"  
       @mousedown="nodeMousedown"
       @dblclick="nodeDblClick"
-      @click="elClick"
       :style="{cursor:isInContent?'move':'default'}">
-      <canvas ref="element"
-        :width="width"
-        :height="height"
-        draggable="false"
-      >
-      </canvas>
-      <div class="text_content" v-show="!isEditing">
-        {{text}}
-      </div>
       <div class="hover_dot" 
         v-show="showDots"
         v-for="item in dots"
@@ -24,6 +14,15 @@
         @mousedown="dotMouseDown"
         @mouseleave="isInDot = false"
       >
+      </div>
+      <canvas ref="element"
+        :width="width"
+        :height="height"
+        :id="id"
+      >
+      </canvas>
+      <div class="text_content" v-show="!isEditing">
+        {{text}}
       </div>
     </div>
   </div>
@@ -41,6 +40,9 @@ import { ELPADDING } from '../constants/index'
         },
     },
     computed: {
+        id() {
+          return this.nodeInfo.id
+        },
         top() {
             return this.nodeInfo.top
         },
@@ -53,8 +55,8 @@ import { ELPADDING } from '../constants/index'
         height() {
             return this.nodeInfo.height
         },
-        editable() {
-          return this.nodeInfo.editable || true
+        readOnly() {
+          return this.nodeInfo.readOnly
         },
         text() {
             return this.nodeInfo.text
@@ -73,11 +75,11 @@ import { ELPADDING } from '../constants/index'
         showDots: false,
         dots: [],
         isNodeMousedown: false,
-        offsetX: 0,//元素定位x坐标
-        offsetY: 0,//元素定位y坐标
         isInContent: false,//鼠标是否在画布有内容的区域
         isInDot: false,//鼠标是否移入到圆点
         element: null,
+        x: 0, //鼠标在画布元素内的x坐标
+        y: 0, //鼠标在画布元素内的x坐标
       }
     },
     methods: {
@@ -88,6 +90,7 @@ import { ELPADDING } from '../constants/index'
             if(!this.nodeInfo.dots) {
               this.resetDots()
             }
+            this.$bus.$on('resetDots', this.resetDots)
         },
         initMouseEvent() {
           document.addEventListener('mouseup',() => {
@@ -106,6 +109,10 @@ import { ELPADDING } from '../constants/index'
             let id = this.nodeInfo.id
             this.$store.commit('board/updateNodeInfo', {id, attr: 'top', value: mouseY})
             this.$store.commit('board/updateNodeInfo', {id, attr: 'left', value: mouseX})
+            this.$bus.$emit('moveSelector', {
+              top: mouseY + ELPADDING,
+              left: mouseX + ELPADDING
+            })
         },
         resetDots() {
           let width = this.width + 2 * ELPADDING
@@ -145,9 +152,8 @@ import { ELPADDING } from '../constants/index'
           this.element = element
           this.x = offsetX + ELPADDING; // 计算鼠标在元素内部的横向偏移量
           this.y = offsetY + ELPADDING; // 计算鼠标在元素内部的纵向偏移量
-          // const ctx = this.$refs.element.getContext('2d');
-          // let isInContent = ctx.isPointInPath(offsetX, offsetY);
           if(this.isInContent) this.isNodeMousedown = true
+          this.nodeClick()
         },
         nodeMouseMove(event) {
           let element = this.$refs.element;
@@ -157,23 +163,30 @@ import { ELPADDING } from '../constants/index'
           const ctx = this.$refs.element.getContext('2d');
           this.isInContent = ctx.isPointInPath(offsetX, offsetY);
         },
-        elClick() {
-      
+        nodeClick() {
+          let { width, height, top, left, id } = this
+          this.$bus.$emit('selectNodes', {
+            width,
+            height,
+            top: top + ELPADDING,
+            left: left + ELPADDING,
+            id
+          })
         },
         mouseEnterDot() {
-          this.showDots = true
+          this.showDots = true;
           this.isInDot = true;
         },
         dotMouseDown(e) {
-          this.stopEvent(e)
+          this.stopEvent(e);
         },
         stopEvent(e) {
-          e.stopPropagation()
+          e.stopPropagation();
           e.preventDefault();
         },
         nodeDblClick(e) {
-          this.stopEvent(e)
-          if(this.editable && this.isInContent) {
+          // this.stopEvent(e)
+          if(!this.readOnly && this.isInContent) {
             this.isEdit = true
             let width = this.width - 2 * ELPADDING
             let height = this.height - 2 * ELPADDING
@@ -207,6 +220,18 @@ import { ELPADDING } from '../constants/index'
       position: relative;
       padding: 10px;
     }
+    // .node_content:nth-child(1) {
+
+    // }
+    // .node_content:nth-child(2) {
+      
+    // }
+    // .node_content:nth-child(3) {
+      
+    // }
+    // .node_content:nth-child(4) {
+      
+    // }
     .hover_dot {
       position: absolute;
       width: 8px;
@@ -224,6 +249,7 @@ import { ELPADDING } from '../constants/index'
       cursor: inherit;
       word-wrap: break-word;
       overflow-wrap: break-word;
+      user-select: none;
     }
 }
 </style>

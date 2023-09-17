@@ -2,61 +2,52 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body, html {
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-    }
-
-    canvas {
-      display: block;
-      width: 400px;
-      height: 400px;
-    }
-  </style>
-  <title>Flowing Dashed Border Square</title>
+  <title>:nth-child()测试</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <canvas id="canvas" width="400px" height="400px"></canvas>
-  <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const sideLength = 300; // 正方形边长
-    let offset = 0; // 虚线偏移
-    ctx.translate(0.5, 0.5)
-    function draw() {
-      // Clear the canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Update the dash offset for flowing effect
-      offset -= 0.1;
+  <style>
+    .parent {
+  display: flex;
+  flex-wrap: wrap;
+}
 
-      // Set the dash pattern
-      ctx.strokeStyle = '#067BEF';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]); // Dash pattern
-      ctx.lineDashOffset = -offset; // Apply the offset
-        console.log(canvas.width)
-      // Draw the square
-      ctx.strokeRect(
-        0,
-        0,
-        sideLength,
-        sideLength
-      );
+.child {
+  width: 50px;
+  height: 50px;
+  background-color: lightblue;
+  border: 1px solid black;
+  margin: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
 
-      // Request animation frame for smooth animation
-      requestAnimationFrame(draw);
-    }
+.parent .child:nth-child(3) {
+  background-color: lightgreen;
+}
 
-    // Set canvas siz
+/* .parent .child:nth-child(even) {
+  background-color: lightcoral;
+} */
 
-    // Start drawing
-    draw();
-  </script>
+  </style>
+  <div class="parent">
+    <div class="a"></div>
+    <div class="child">1</div>
+    <div class="child">2</div>
+    <div class="child">3</div>
+    <div class="child">4</div>
+    <div class="child">5</div>
+    <div class="child">6</div>
+    <div class="child">7</div>
+    <div class="child">8</div>
+    <div class="child">9</div>
+    <div class="child">10</div>
+  </div>
 </body>
 </html>
-
-
