@@ -4,21 +4,23 @@
       @mousemove="nodeMouseMove"  
       @mousedown="nodeMousedown"
       @dblclick="nodeDblClick"
-      :style="{cursor:isInContent?'move':'default'}">
+      :style="{cursor}">
       <div class="hover_dot" 
         v-show="showDots"
         v-for="item in dots"
         :key="item.id"
-        :style="{top:`${item.y}px`,left:`${item.x}px`,cursor:isInDot?'crosshair':'default'}"
+        :style="{cursor}"
         @mouseenter="mouseEnterDot"
         @mousedown="dotMouseDown"
         @mouseleave="isInDot = false"
       >
+      <!-- top:`${item.y}px`,left:`${item.x}px`, -->
       </div>
       <canvas ref="element"
         :width="width"
         :height="height"
         :id="id"
+        :style="{cursor:isInContent?'move':'default'}"
       >
       </canvas>
       <div class="text_content" v-show="!isEditing">
@@ -38,6 +40,10 @@ import { ELPADDING } from '../constants/index'
             type: Object,
             required: true
         },
+        cursor: {
+          type: String,
+          required: true
+        }
     },
     computed: {
         id() {
@@ -103,7 +109,7 @@ import { ELPADDING } from '../constants/index'
           })
         },
         moveNode(event) {
-            const canvasRect = this.$parent.$refs.board.getBoundingClientRect();
+            const canvasRect = this.$parent.$refs.drawing_board.getBoundingClientRect();
             const mouseX = event.clientX - canvasRect.left - this.x;
             const mouseY = event.clientY - canvasRect.top - this.y;
             let id = this.nodeInfo.id
@@ -154,6 +160,7 @@ import { ELPADDING } from '../constants/index'
           this.y = offsetY + ELPADDING; // 计算鼠标在元素内部的纵向偏移量
           if(this.isInContent) this.isNodeMousedown = true
           this.nodeClick()
+          this.$store.commit('node/setDragNodeInfo', this.nodeInfo);
         },
         nodeMouseMove(event) {
           let element = this.$refs.element;
@@ -187,20 +194,19 @@ import { ELPADDING } from '../constants/index'
         nodeDblClick(e) {
           // this.stopEvent(e)
           if(!this.readOnly && this.isInContent) {
-            this.isEdit = true
-            let width = this.width - 2 * ELPADDING
-            let height = this.height - 2 * ELPADDING
-            let value = this.nodeInfo.text
+            // let width = this.width - 2 * ELPADDING
+            // let height = this.height - 2 * ELPADDING
+            // let value = this.nodeInfo.text
             let id = this.nodeInfo.id
-            let data = {
-              width,
-              height,
-              value,
-              id,
-              top: this.top,
-              left: this.left
-            }
-            this.$bus.$emit('onEdit', data)
+            // let data = {
+            //   width,
+            //   height,
+            //   value,
+            //   id,
+            //   top: this.top,
+            //   left: this.left
+            // }
+            this.$bus.$emit('onEdit', id)
           }
         }
     },
@@ -220,18 +226,22 @@ import { ELPADDING } from '../constants/index'
       position: relative;
       padding: 10px;
     }
-    // .node_content:nth-child(1) {
-
-    // }
-    // .node_content:nth-child(2) {
-      
-    // }
-    // .node_content:nth-child(3) {
-      
-    // }
-    // .node_content:nth-child(4) {
-      
-    // }
+    .hover_dot:nth-child(1) {
+      top: 6px;
+      left: calc(50% - 4px);
+    }
+    .hover_dot:nth-child(2) {
+      top: calc(50% - 4px);
+      left: calc(100% - 14px);
+    }
+    .hover_dot:nth-child(3) {
+      top: calc(100% - 14px);
+      left: calc(50% - 4px);
+    }
+    .hover_dot:nth-child(4) {
+      top: calc(50% - 4px);
+      left: calc(6px);
+    }
     .hover_dot {
       position: absolute;
       width: 8px;
@@ -250,6 +260,7 @@ import { ELPADDING } from '../constants/index'
       word-wrap: break-word;
       overflow-wrap: break-word;
       user-select: none;
+      pointer-events: none;
     }
 }
 </style>

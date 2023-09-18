@@ -2,7 +2,7 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 
 Vue.use(Vuex)
-import nodes from './nodes.js'
+import node from './node.js'
 import board from './board.js'
 export default new Vuex.Store({
   state: {
@@ -14,7 +14,7 @@ export default new Vuex.Store({
   actions: {
   },
   modules: {
-    nodes,
+    node,
     board
   }
 })

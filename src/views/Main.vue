@@ -38,7 +38,7 @@ import { mapState } from 'vuex';
       });
     },
     computed: {
-      ...mapState('nodes', ['isElMouseDown','dragElInfo'])
+      ...mapState('node', ['isElMouseDown','dragElInfo'])
     },
     data () {
       return {
@@ -65,10 +65,10 @@ import { mapState } from 'vuex';
           let isContained = this.isElementOverlapping(this.$refs.board.$refs.paneR, this.$refs.dragCnavas)
           if(isContained) {
             // 添加元素
-            this.$bus.$emit('creatElement', this.dragElInfo, this.$refs.dragCnavas, event)
+            this.$bus.$emit('createElement', this.dragElInfo, this.$refs.dragCnavas, event)
           }
-          this.$store.commit('nodes/setIsElMouseDown', false);
-          this.$store.commit('nodes/setdragElInfo', '');
+          this.$store.commit('node/setIsElMouseDown', false);
+          this.$store.commit('node/setDragNodeInfo', '');
           this.showDragEl = false
         }
       },

@@ -26,7 +26,7 @@ const board = {
             let funName = nodeInfo.funName
             let selector = '#' + id
             nodeInfo[attr] = value
-            requestAnimationFrame(() => {
+            requestAnimationFrame(() => {//requestAnimationFrame防止图像闪烁
               canvas[funName](selector, nodeInfo)
             })
         }

@@ -1,5 +1,5 @@
 // 拖拽元素列表状态管理
-const nodes = {
+const node = {
     namespaced: true,
     state: {
       // 状态
@@ -7,11 +7,12 @@ const nodes = {
       dragElInfo: '',
     },
     mutations: {
-      // 修改状态的方法
+      // 元素列表keyDown
       setIsElMouseDown(state, data) {
         state.isElMouseDown = data
       },
-      setdragElInfo(state, data) {
+      // 拖拽元素列表元素或画布中节点信息
+      setDragNodeInfo(state, data) {
         state.dragElInfo = data
       },
     },
@@ -23,4 +24,4 @@ const nodes = {
     }
   };
   
-export default nodes;
+export default node;
