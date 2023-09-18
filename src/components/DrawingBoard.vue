@@ -160,10 +160,14 @@ import { ELPADDING } from '../constants/index'
       },
       boardClick(e) {
         e.stopPropagation();
+        let isOnBoard = this.isOnBoard(e)
+        if(isOnBoard)
+          this.selectBoxInfo.showSelector = false
+      },
+      isOnBoard(e) {
         let isBoardWrap = e.target.classList.contains("drawing_board_wrap")
         let isBoard = e.target.classList.contains("drawing_board")
-        if(isBoardWrap || isBoard)
-          this.selectBoxInfo.showSelector = false
+        return isBoardWrap || isBoard
       },
       createElement(info, el, event) {
         const canvasRect = this.$refs.drawing_board.getBoundingClientRect();
@@ -358,14 +362,17 @@ import { ELPADDING } from '../constants/index'
         canvas.drawSelectBox(this.$refs['select_box_canvas'], {width, height})
       },
       paneRMouseDown(e) {
-        let element = this.$refs.drawing_board
-        var x = e.clientX - element.getBoundingClientRect().left;
-        var y = e.clientY - element.getBoundingClientRect().top;
-        this.paneRMouseDownX = x
-        this.paneRMouseDownY = y
-        this.selectingBoxleft = x
-        this.selectingBoxTop = y
-        this.isSelecting = true
+        let isOnBoard = this.isOnBoard(e)
+        if(isOnBoard) {
+          let element = this.$refs.drawing_board
+          var x = e.clientX - element.getBoundingClientRect().left;
+          var y = e.clientY - element.getBoundingClientRect().top;
+          this.paneRMouseDownX = x
+          this.paneRMouseDownY = y
+          this.selectingBoxleft = x
+          this.selectingBoxTop = y
+          this.isSelecting = true
+        }
       },
       paneRMouseMove(e) {
         if(this.isSelecting) {
