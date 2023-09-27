@@ -15,8 +15,9 @@
       <!-- top:`${item.y}px`,left:`${item.x}px`, -->
       </div>
       <canvas ref="element"
+        class="node"
         :id="id"
-        :style="{cursor:isInContent?'move':'default',width:'100%',height:'100%'}"
+        :style="{cursor:isInContent?'move':'default'}"
       >
       </canvas>
       <div class="text_content" v-show="!isEditing">
@@ -175,6 +176,11 @@ import { ELPADDING } from '../constants/index'
       width: 100%;
       height: 100%;
       position: relative;
+      .node {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
     }
     .hover_dot:nth-child(1) {
       top: -4px;
@@ -200,6 +206,7 @@ import { ELPADDING } from '../constants/index'
       border-radius: 50%;
       background-color: #fff;
       cursor: crosshair;
+      z-index: 999;
     }
     .text_content {
       position: absolute;

@@ -111,8 +111,8 @@ export const drawRoundRect = (selector, info) => {
   const defaultInfo = {
     width: 80,
     height: 50,
-    borderWidth: 2,
-    cornerRadius: 20,
+    borderWidth: 8,
+    cornerRadius: 0.3,
     fillColor: '#D6D6D6'
   }
   info = {...defaultInfo, ...info}
@@ -122,7 +122,12 @@ export const drawRoundRect = (selector, info) => {
   canvas.width = info.width
   canvas.height = info.height
   const halfBorderWidth = borderWidth / 2; // 半个边框宽度
-
+  if(cornerRadius <= 1) {
+    cornerRadius *= height
+  }
+  if(2 * cornerRadius >= width) cornerRadius = width/2
+  let radius = cornerRadius - halfBorderWidth
+  if(radius <= 0) radius = 0
   ctx.lineWidth = borderWidth;
   ctx.strokeStyle = 'black';
   ctx.fillStyle = fillColor;
@@ -131,13 +136,13 @@ export const drawRoundRect = (selector, info) => {
   ctx.beginPath();
   ctx.moveTo(x + cornerRadius + halfBorderWidth, y + halfBorderWidth);
   ctx.lineTo(x + width - cornerRadius - halfBorderWidth, y + halfBorderWidth);
-  ctx.arcTo(x + width - halfBorderWidth, y + halfBorderWidth, x + width - halfBorderWidth, y + cornerRadius + halfBorderWidth, cornerRadius - halfBorderWidth);
+  ctx.arcTo(x + width - halfBorderWidth, y + halfBorderWidth, x + width - halfBorderWidth, y + cornerRadius + halfBorderWidth, radius);
   ctx.lineTo(x + width - halfBorderWidth, y + height - cornerRadius - halfBorderWidth);
-  ctx.arcTo(x + width - halfBorderWidth, y + height - halfBorderWidth, x + width - cornerRadius - halfBorderWidth, y + height - halfBorderWidth, cornerRadius - halfBorderWidth);
+  ctx.arcTo(x + width - halfBorderWidth, y + height - halfBorderWidth, x + width - cornerRadius - halfBorderWidth, y + height - halfBorderWidth, radius);
   ctx.lineTo(x + cornerRadius + halfBorderWidth, y + height - halfBorderWidth);
-  ctx.arcTo(x + halfBorderWidth, y + height - halfBorderWidth, x + halfBorderWidth, y + height - cornerRadius - halfBorderWidth, cornerRadius - halfBorderWidth);
+  ctx.arcTo(x + halfBorderWidth, y + height - halfBorderWidth, x + halfBorderWidth, y + height - cornerRadius - halfBorderWidth, radius);
   ctx.lineTo(x + halfBorderWidth, y + cornerRadius + halfBorderWidth);
-  ctx.arcTo(x + halfBorderWidth, y + halfBorderWidth, x + cornerRadius + halfBorderWidth, y + halfBorderWidth, cornerRadius - halfBorderWidth);
+  ctx.arcTo(x + halfBorderWidth, y + halfBorderWidth, x + cornerRadius + halfBorderWidth, y + halfBorderWidth, radius);
   ctx.closePath();
 
   ctx.fill(); // 填充圆角矩形
@@ -202,7 +207,6 @@ export const drawTriangle = (selector, info) => {
   let {width, height, borderWidth, fillColor} = info
   canvas.width = width
   canvas.height = height
-
   const x1 = width / 2; // 第一个顶点的x坐标
   const y1 = borderWidth; // 第一个顶点的y坐标
   const x2 = 0.5; // 第二个顶点的x坐标
@@ -244,8 +248,8 @@ export const drawCircle = (selector, info) => {
   }
   info = {...defaultInfo, ...info}
   let {borderWidth, fillColor, width, height} = info
-  let radiusX = width / 2 - borderWidth;
-  let radiusY = height / 2 - borderWidth;
+  let radiusX = width / 2 - borderWidth / 2;
+  let radiusY = height / 2 - borderWidth / 2;
   const centerX = width / 2; // 圆心的x坐标
   const centerY = height / 2; // 圆心的y坐标
   if(radiusX < 0) radiusX = 0
