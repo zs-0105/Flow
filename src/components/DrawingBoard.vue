@@ -1,6 +1,6 @@
 <template>
-    <div class="paneR" ref="paneR" @mousedown="paneRMouseDown" @mousemove="paneRMouseMove" @mouseup="paneRMouseUp" :style="{overflow: isShpaeControlorMouseDown?'hidden':'auto', cursor}">
-        <div class="drawing_board_wrap" @click="boardClick" @mousemove="onBoardMouseMove" :style="{width: `${boardWidth}px`,height: `${boardHight}px`}">
+    <div class="paneR" ref="paneR" @mousedown="paneRMouseDown" @mousemove="paneRMouseMove" :style="{overflow: isShpaeControlorMouseDown?'hidden':'auto', cursor}">
+        <div class="drawing_board_wrap" @mousedown="boardMouseDown" @mousemove="startResize" :style="{width: `${boardWidth}px`,height: `${boardHight}px`}">
             <div class="drawing_board_content">
                 <canvas ref="drawing_board" class="drawing_board" :width="boardWidth" :height="boardHight"></canvas>
                 <node v-for="(value, key) in nodes" :key="key" :node-info="value" :cursor="cursor"></node>
@@ -9,26 +9,26 @@
                   class="editInput" 
                   v-model="editorInfo.editorValue" 
                   @blur="nodeEndedting" 
-                  :style="{width: editorWidth, height: editorHeight, top:selectorTop, left:selectorLeft}" 
-                  v-if="isEditing" 
+                  :style="{width: editorWidth, height: editorHeight, top: editorTop, left: editorLeft}" 
+                  v-if="isEditing"
                 />
-                <div class="select_box" :style="{width: seletorWidth, height: seletorHeight, top: seletorTop, left: seletorLeft}" v-if="selectBoxInfo.showSelector">
+                <div class="select_box" ref="select_box" :style="{width: selectorWidth, height: selectorHeight, top: selectorTop, left: selectorLeft}" v-show="selectBoxInfo.showSelector">
                   <canvas ref="select_box_canvas" :style="{'pointer-events':isShpaeControlorMouseDown ? 'auto' : 'none', cursor}"></canvas>
                   <div class="shape_controlor" 
-                    v-for="index in 8" 
+                    v-for="index in 8"
                     :key="index" 
-                    @mousedown="controlorKeyDown(index, $event)" 
+                    @mousedown="controlorMouseDown(index, $event)" 
                     :class="{activeCon: isShpaeControlorMouseDown && controlorIndex == index}"
                   ></div>
                   <div class="shape_rotater"></div>
                 </div>
                 <div class="selecting_box" 
-                  v-if="isSelecting" 
+                  v-if="isSelecting"
                   :style="{
-                    top:selectingBoxTop + 'px',
-                    left:selectingBoxleft + 'px',
-                    width:selectingBoxWidth + 'px',
-                    height:selectingBoxHeight + 'px'
+                    top:selectingBoxInfo.selectingBoxTop + 'px',
+                    left:selectingBoxInfo.selectingBoxleft + 'px',
+                    width:selectingBoxInfo.selectingBoxWidth + 'px',
+                    height:selectingBoxInfo.selectingBoxHeight + 'px'
                   }"
                 >
                 </div>
@@ -48,34 +48,34 @@ import { ELPADDING } from '../constants/index'
       node
     },
     computed: {
-      ...mapState('board', ['boardBkColor','boardWidth', 'boardHight', 'nodes']),
-      seletorWidth(){
-        return this.selectBoxInfo.width + 'px'
-      },
-      seletorHeight() {
-        return this.selectBoxInfo.height + 'px'
-      },
-      seletorTop() {
+      ...mapState('board', ['boardBkColor','boardWidth', 'boardHight', 'nodes', 'selectedNodesId']),
+      selectorTop() {
         return this.selectBoxInfo.top + 'px'
       },
-      seletorLeft() {
+      selectorLeft() {
         return this.selectBoxInfo.left + 'px'
+      },
+      selectorWidth(){
+        return this.selectBoxInfo.width + 'px'
+      },
+      selectorHeight() {
+        return this.selectBoxInfo.height + 'px'
       },
       editorWidth() {
         let nodeId = this.editingNodeId
-        return this.nodes[nodeId].width - 2 * ELPADDING - 1 + 'px'
+        return this.nodes[nodeId].width - 1 + 'px'
       },
       editorHeight() {
         let nodeId = this.editingNodeId
-        return this.nodes[nodeId].height - 2 * ELPADDING - 1 + 'px'
+        return this.nodes[nodeId].height - 1 + 'px'
       },
-      selectorTop() {
+      editorTop() {
         let nodeId = this.editingNodeId
-        return this.nodes[nodeId].top + ELPADDING + 'px'
+        return this.nodes[nodeId].top + 'px'
       },
-      selectorLeft() {
+      editorLeft() {
         let nodeId = this.editingNodeId
-        return this.nodes[nodeId].left + ELPADDING + 'px'
+        return this.nodes[nodeId].left + 'px'
       },
       cursor() {
         if(this.isShpaeControlorMouseDown) {
@@ -121,7 +121,6 @@ import { ELPADDING } from '../constants/index'
           height: 0,
           top: 0,
           left: 0,
-          selectNodesIds: [],
           startWidth: 0,
           startHeight: 0,
           startTop: 0,
@@ -129,16 +128,21 @@ import { ELPADDING } from '../constants/index'
         },
         controlorIndex: 0,
         isShpaeControlorMouseDown: false,
-        mouseDownX: 0,
-        mouseDownY: 0,
         animationFrameId: null,
-        selectingBoxTop: 0,
-        selectingBoxleft: 0,
-        selectingBoxWidth: 0,
-        selectingBoxHeight: 0,
+        selectingBoxInfo: {
+          selectingBoxTop: 0,
+          selectingBoxleft: 0,
+          selectingBoxWidth: 0,
+          selectingBoxHeight: 0
+        },
         isSelecting: false,
-        paneRMouseDownX: 0,
-        paneRMouseDownY: 0
+        mouseDownX: 0,//相对于画布的x坐标或者clientX
+        mouseDownY: 0,//相对于画布的y坐标或者clientY
+        selectedNodes:[],
+        isNodeMouseDown: false,
+        relativeCoords: {},
+        selectorOriginState: {},
+        selectedNodesOriginState: {}
       }
     },
     mounted(){
@@ -156,13 +160,31 @@ import { ELPADDING } from '../constants/index'
         this.$bus.$on('onEdit', this.nodeOnedting)
         this.$bus.$on('selectNodes', this.selectNodes)
         this.$bus.$on('moveSelector', this.moveSelector)
-        document.addEventListener('mouseup', () => this.isShpaeControlorMouseDown = false)
+        this.$bus.$on('setPaneRMouseDown', this.setPaneRMouseDown)
+        this.$bus.$on('nodeMouseDown', this.onNodeMouseDown)
+        document.addEventListener('mouseup', () => {
+          if(this.isShpaeControlorMouseDown) {
+            this.isShpaeControlorMouseDown = false
+          }
+          if(this.isSelecting) {
+            this.getSelectedNodes()
+            this.isSelecting = false
+            this.selectingBoxInfo.selectingBoxHeight = 0
+            this.selectingBoxInfo.selectingBoxWidth = 0
+          }
+          this.isNodeMouseDown = false
+        })
       },
-      boardClick(e) {
-        e.stopPropagation();
+      boardMouseDown(e) {
         let isOnBoard = this.isOnBoard(e)
-        if(isOnBoard)
+        if(isOnBoard){
           this.selectBoxInfo.showSelector = false
+          this.$store.commit('board/resetSelectedNodesId')
+        }
+      },
+      setPaneRMouseDown(info) {
+        this.mouseDownX = info.x
+        this.mouseDownY = info.y
       },
       isOnBoard(e) {
         let isBoardWrap = e.target.classList.contains("drawing_board_wrap")
@@ -171,8 +193,8 @@ import { ELPADDING } from '../constants/index'
       },
       createElement(info, el, event) {
         const canvasRect = this.$refs.drawing_board.getBoundingClientRect();
-        const mouseX = event.clientX - canvasRect.left - (el.width + 2 * ELPADDING) / 2;
-        const mouseY = event.clientY - canvasRect.top - (el.height + 2 * ELPADDING) / 2;
+        const mouseX = event.clientX - canvasRect.left - el.width / 2;
+        const mouseY = event.clientY - canvasRect.top - el.height / 2;
         let data = {
           ...info,
           name: info.name,
@@ -189,39 +211,33 @@ import { ELPADDING } from '../constants/index'
         this.$store.commit('board/addNode', data);
       },
       nodeOnedting(id) {
-        // let {id, width, height, value, top, left} = info
         this.isEditing = true
-        // this.editorInfo.editorWidth = width
-        // this.editorInfo.editorHeight = height
-        // this.editorInfo.editorValue = value
-        // this.top = top + ELPADDING
-        // this.left = left + ELPADDING
         this.editingNodeId = id
         this.$nextTick(() => {
           this.$refs.editInput.focus()
-          this.updateNodeInfo({
-            id,
-            attr: 'isEditing',
-            value: true
-          })
+          // this.updateNodeInfo({
+          //   id,
+          //   attr: 'isEditing',
+          //   value: true
+          // })
         })
       },
       nodeEndedting(e) {
         let value = e.target.value
-        let infos = [
-          {
-            id: this.editingNodeId,
-            attr: 'isEditing',
-            value: false
-          },
-          {
-            id: this.editingNodeId,
-            attr: 'text',
-            value: value
-          }
-        ]
+        // let infos = [
+        //   {
+        //     id: this.editingNodeId,
+        //     attr: 'isEditing',
+        //     value: false
+        //   },
+        //   {
+        //     id: this.editingNodeId,
+        //     attr: 'text',
+        //     value: value
+        //   }
+        // ]
         this.isEditing = false
-        this.updateNodeInfo(infos)
+        // this.updateNodeInfo(infos)
       },
       updateNodeInfo(data) {
         if(Array.isArray(data)) {
@@ -229,30 +245,23 @@ import { ELPADDING } from '../constants/index'
             this.$store.commit('board/updateNodeInfo', data)
           }
         }else {
-          let {id, attr, value} = data
-          this.$store.commit('board/updateNodeInfo', {id, attr, value})
+          this.$store.commit('board/updateNodeInfo', data)
         }
-      },
-      batchUpdateNodeInfo(ids, attr, value) {
-        this.$store.commit('board/batchUpdateNodeInfo', {ids, attr, value})
       },
       selectNodes(nodesInfo) {
         this.selectBoxInfo.showSelector = true
-        this.$nextTick(() => {
-          let selectBox = this.$refs['select_box_canvas']
-          if(Array.isArray(nodesInfo)) {
-            let { width, height, top, left ,ids} = getComputedInfo(nodesInfo)
-            this.selectBoxInfo.selectNodesIds = ids
-          }else {
-            let { width, height, top, left, id}= nodesInfo
-            this.selectBoxInfo.width = width
-            this.selectBoxInfo.height = height
-            this.selectBoxInfo.top = top
-            this.selectBoxInfo.left = left
-            this.selectBoxInfo.selectNodesIds = [id]
-            canvas.drawSelectBox(selectBox, {width, height})
+        let selectBox = this.$refs['select_box_canvas']
+          if(!nodesInfo.length) {
+            this.selectBoxInfo.showSelector = false
+            return;
           }
-        })
+          let { width, height, top, left, ids} = this.getComputedInfo(nodesInfo)
+          this.selectBoxInfo.width = width
+          this.selectBoxInfo.height = height
+          this.selectBoxInfo.top = top
+          this.selectBoxInfo.left = left
+          this.$store.commit('board/updateSelectedNodesId', ids)
+          canvas.drawSelectBox(selectBox, {width, height})
       },
       moveSelector(info) {
         let { top, left } = info
@@ -260,106 +269,275 @@ import { ELPADDING } from '../constants/index'
         this.selectBoxInfo.left = left 
       },
       getComputedInfo(nodesInfo) {
-
+        let minTop, minLeft, maxTop, maxLeft, ids = []
+        for(let index = 0; index < nodesInfo.length; index ++) {
+          let node = nodesInfo[index]
+          let { top, left, width, height } = node
+          ids.push(node.id)
+          if(index == 0) {
+            minTop = top
+            minLeft = left
+            maxTop = top + height
+            maxLeft = left + width
+          }else {
+            if(top < minTop) minTop = top
+            if(left < minLeft) minLeft = left
+            if(top + height > maxTop) maxTop = top + height
+            if(left + width > maxLeft) maxLeft = left + width
+          }
+        }
+        return {
+          width: maxLeft - minLeft,
+          height: maxTop - minTop,
+          left: minLeft,
+          top: minTop,
+          ids
+        }
       },
-      controlorKeyDown(index, event) {
+      controlorMouseDown(index, event) {
+        event.stopPropagation();
         this.controlorIndex = index
-        this.isShpaeControlorMouseDown = true
         this.mouseDownX = event.clientX
         this.mouseDownY = event.clientY
         this.selectBoxInfo.startWidth = this.selectBoxInfo.width
         this.selectBoxInfo.startHeight = this.selectBoxInfo.height
         this.selectBoxInfo.startTop = this.selectBoxInfo.top
         this.selectBoxInfo.startLeft = this.selectBoxInfo.left
+        this.selectedNodesOriginState = this.getSelectedNodesOriginState(event)
+        this.selectorOriginState = this.getSelectorOriginState(event)
+        this.isShpaeControlorMouseDown = true
       },
-      onBoardMouseMove(event) {
-        let movedWidth = Math.floor(event.clientX - this.mouseDownX)
-        let movedHeight = Math.floor(event.clientY - this.mouseDownY)
+      getSelectedNodesOriginState(e) {
+        let nodes = []
+        for(let nodeId of this.selectedNodesId) {
+          let nodeDom = document.getElementById(nodeId)
+          let rect = nodeDom.getBoundingClientRect()
+          let offsetX = e.clientX - rect.left
+          let offsetY = e.clientY - rect.top
+          let nodeInfo = {
+            ...this.nodes[nodeId],
+            offsetX,
+            offsetY
+          }
+          nodes.push(nodeInfo)
+        }
+        return JSON.parse(JSON.stringify(nodes))
+      },
+      startResize(event) {
+        let movedWidth = event.clientX - this.mouseDownX
+        let movedHeight = event.clientY - this.mouseDownY
         let index = this.controlorIndex
-        let selectNodesIds = this.selectBoxInfo.selectNodesIds
         if(this.isShpaeControlorMouseDown) {
-            this.changNodesShape(selectNodesIds, index, movedWidth, movedHeight)
+            this.resize(index, movedWidth, movedHeight)
         }
       },
-      changNodesShape(selectNodesIds, index, movedWidth, movedHeight) {
+      resize(index, movedWidth, movedHeight) {
         let width, height, top, left
-        switch(index) {
-          case 1:
-            width = this.selectBoxInfo.startWidth - movedWidth
-            height = this.selectBoxInfo.startHeight - movedHeight
-            top = this.selectBoxInfo.startTop + movedHeight
-            left = this.selectBoxInfo.startLeft + movedWidth
-            if(width <= 20) left = this.selectBoxInfo.startLeft + this.selectBoxInfo.startWidth - 20
-            if(height <= 20) top = this.selectBoxInfo.startTop + this.selectBoxInfo.startHeight - 20
-            break;
-          case 2:
-            height = this.selectBoxInfo.startHeight - movedHeight
-            width = this.selectBoxInfo.startWidth
-            top = this.selectBoxInfo.startTop + movedHeight
-            left = this.selectBoxInfo.startLeft
-            if(height <= 20) top = this.selectBoxInfo.startTop + this.selectBoxInfo.startHeight - 20
-            break;
-          case 3:
-            width = this.selectBoxInfo.startWidth + movedWidth
-            height = this.selectBoxInfo.startHeight - movedHeight
-            top = this.selectBoxInfo.startTop + movedHeight
-            left = this.selectBoxInfo.startLeft
-            if(width <= 20) left = this.selectBoxInfo.startLeft
-            if(height <= 20) top = this.selectBoxInfo.startTop + this.selectBoxInfo.startHeight - 20
-            break;
-          case 4:
-            height = this.selectBoxInfo.startHeight
-            width = this.selectBoxInfo.startWidth + movedWidth
-            top = this.selectBoxInfo.startTop
-            left = this.selectBoxInfo.startLeft
-            if(height <= 20) top = this.selectBoxInfo.startTop + this.selectBoxInfo.startHeight - 20
-            break;
-          case 5:
-            width = this.selectBoxInfo.startWidth + movedWidth
-            height = this.selectBoxInfo.startHeight + movedHeight
-            top = this.selectBoxInfo.startTop
-            left = this.selectBoxInfo.startLeft
-            break;
-          case 6:
-            height = this.selectBoxInfo.startHeight + movedHeight
-            width = this.selectBoxInfo.startWidth
-            top = this.selectBoxInfo.startTop
-            left = this.selectBoxInfo.startLeft
-            break;
-          case 7:
-            width = this.selectBoxInfo.startWidth - movedWidth
-            height = this.selectBoxInfo.startHeight + movedHeight
-            top = this.selectBoxInfo.startTop
-            left = this.selectBoxInfo.startLeft + movedWidth
-            if(width <= 20) left = this.selectBoxInfo.startLeft + this.selectBoxInfo.startWidth - 20
-            break;
-          case 8:
-            height = this.selectBoxInfo.startHeight
-            width = this.selectBoxInfo.startWidth - movedWidth
-            top = this.selectBoxInfo.startTop
-            left = this.selectBoxInfo.startLeft + movedWidth
-            if(width <= 20) left = this.selectBoxInfo.startLeft + this.selectBoxInfo.startWidth - 20
-            break;
+          switch(index) {
+            case 1:
+              width = this.selectBoxInfo.startWidth - movedWidth
+              height = this.selectBoxInfo.startHeight - movedHeight
+              top = this.selectBoxInfo.startTop + movedHeight
+              left = this.selectBoxInfo.startLeft + movedWidth
+              if(width <= 20) left = this.selectBoxInfo.startLeft + this.selectBoxInfo.startWidth - 20
+              if(height <= 20) top = this.selectBoxInfo.startTop + this.selectBoxInfo.startHeight - 20
+              break;
+            case 2:
+              height = this.selectBoxInfo.startHeight - movedHeight
+              width = this.selectBoxInfo.startWidth
+              top = this.selectBoxInfo.startTop + movedHeight
+              left = this.selectBoxInfo.startLeft
+              if(height <= 20) top = this.selectBoxInfo.startTop + this.selectBoxInfo.startHeight - 20
+              break;
+            case 3:
+              width = this.selectBoxInfo.startWidth + movedWidth
+              height = this.selectBoxInfo.startHeight - movedHeight
+              top = this.selectBoxInfo.startTop + movedHeight
+              left = this.selectBoxInfo.startLeft
+              if(width <= 20) left = this.selectBoxInfo.startLeft
+              if(height <= 20) top = this.selectBoxInfo.startTop + this.selectBoxInfo.startHeight - 20
+              break;
+            case 4:
+              height = this.selectBoxInfo.startHeight
+              width = this.selectBoxInfo.startWidth + movedWidth
+              top = this.selectBoxInfo.startTop
+              left = this.selectBoxInfo.startLeft
+              if(height <= 20) top = this.selectBoxInfo.startTop + this.selectBoxInfo.startHeight - 20
+              break;
+            case 5:
+              width = this.selectBoxInfo.startWidth + movedWidth
+              height = this.selectBoxInfo.startHeight + movedHeight
+              top = this.selectBoxInfo.startTop
+              left = this.selectBoxInfo.startLeft
+              break;
+            case 6:
+              height = this.selectBoxInfo.startHeight + movedHeight
+              width = this.selectBoxInfo.startWidth
+              top = this.selectBoxInfo.startTop
+              left = this.selectBoxInfo.startLeft
+              break;
+            case 7:
+              width = this.selectBoxInfo.startWidth - movedWidth
+              height = this.selectBoxInfo.startHeight + movedHeight
+              top = this.selectBoxInfo.startTop
+              left = this.selectBoxInfo.startLeft + movedWidth
+              if(width <= 20) left = this.selectBoxInfo.startLeft + this.selectBoxInfo.startWidth - 20
+              break;
+            case 8:
+              height = this.selectBoxInfo.startHeight
+              width = this.selectBoxInfo.startWidth - movedWidth
+              top = this.selectBoxInfo.startTop
+              left = this.selectBoxInfo.startLeft + movedWidth
+              if(width <= 20) left = this.selectBoxInfo.startLeft + this.selectBoxInfo.startWidth - 20
+              break;
+          }
+          if(width <= 20) {
+            width = 20
+            if(index == 3 || index == 4 || index == 5){
+              movedWidth = -this.selectorOriginState.width + 20
+            }else {
+              movedWidth = this.selectorOriginState.width - 20
+            }
+          }
+          if(height <= 20) {
+            height = 20
+            if(index == 5 || index == 6 || index == 7) {
+              movedHeight = -this.selectorOriginState.height + 20
+            }else {
+              movedHeight = this.selectorOriginState.height - 20
+            }
+            console.log(movedHeight);
+          }
+          if(width >= 20) {
+            for (let nodeInfo of this.selectedNodesOriginState) {
+              let nodeId = nodeInfo.id
+              let { width, left } = this.getChangIngWidthAndLeft(index, nodeInfo, movedWidth)
+              this.updateNodeInfo({
+                id: nodeId,
+                left,
+                width
+              })
+            }
+            this.selectBoxInfo.left = left
+            this.selectBoxInfo.width = width
+          }
+          if(height >= 20){
+            for (let nodeInfo of this.selectedNodesOriginState) {
+              let nodeId = nodeInfo.id
+              let { height, top } = this.getChangIngHeightAndTop(index, nodeInfo, movedHeight)
+              this.updateNodeInfo({
+                id: nodeId,
+                height,
+                top
+              })
+            }
+            this.selectBoxInfo.top = top
+            this.selectBoxInfo.height = height
+          }
+          canvas.drawSelectBox(this.$refs['select_box_canvas'], {width, height})
+      },
+      getChangIngWidthAndLeft(index, nodeInfo, movedWidth) {
+        let nodeOriginWidth = nodeInfo.width
+        let nodeOriginLeft = nodeInfo.left
+        let selectorOriginWidth = this.selectorOriginState.width
+        let selectorOriginLeft = this.selectorOriginState.left
+        let widthPercentageIncrease = 1, width = nodeOriginWidth, left = nodeOriginLeft
+        if(index == 3 || index == 4 || index == 5) {
+          widthPercentageIncrease = (selectorOriginWidth + movedWidth) / selectorOriginWidth
+        }else if (index == 1 || index == 7 || index == 8) {
+          widthPercentageIncrease = (selectorOriginWidth - movedWidth) / selectorOriginWidth
         }
-        if(width <= 20) {
-          width = 20
+
+        if(index == 2 || index == 6) {
+          width = nodeOriginWidth
+        }else {
+          width = widthPercentageIncrease * nodeOriginWidth
         }
-        if(height <= 20) {
-          height = 20
+        
+        // if(width <= 20) width = 20
+        if(nodeOriginLeft == selectorOriginLeft){
+          if(index == 1 || index == 7 || index == 8) {
+            left = selectorOriginLeft + movedWidth
+          } else {
+            left = nodeOriginLeft
+          }
+        }else if(nodeOriginLeft + nodeOriginWidth == selectorOriginLeft + selectorOriginWidth) {
+          if(index == 3 || index == 4 || index == 5) {
+            left = selectorOriginLeft + selectorOriginWidth + movedWidth - width
+          }else if(index == 1 || index == 7 || index == 8){
+            left = nodeOriginLeft + nodeOriginWidth - width
+          }else {
+            left = nodeOriginLeft
+          }
+        }else {
+          let leftPercentage = (nodeOriginLeft - selectorOriginLeft) / selectorOriginWidth
+          if(index == 1 || index == 7 || index == 8) {
+            let selectorWidth = selectorOriginWidth - movedWidth
+            let selectorLeft = selectorOriginLeft + movedWidth
+            left = selectorLeft + (selectorWidth * leftPercentage)
+          }else if (index == 3 || index == 4 || index == 5) {
+            let selectorWidth = selectorOriginWidth + movedWidth
+            left = selectorOriginLeft + (selectorWidth * leftPercentage)
+          }else {
+            left = nodeOriginLeft
+          }
         }
-        if(width >= 20) {
-          this.selectBoxInfo.left = left
-          this.selectBoxInfo.width = width
-          this.batchUpdateNodeInfo(selectNodesIds, 'left', left - ELPADDING)
-          this.batchUpdateNodeInfo(selectNodesIds, 'width', width)
+        return {
+          width,
+          left
         }
-        if(height >= 20){
-          this.selectBoxInfo.top = top
-          this.selectBoxInfo.height = height
-          this.batchUpdateNodeInfo(selectNodesIds, 'top', top - ELPADDING)
-          this.batchUpdateNodeInfo(selectNodesIds, 'height', height)
+      },
+      getChangIngHeightAndTop(index, nodeInfo, movedHeight) {
+        let nodeOriginHeight = nodeInfo.height
+        let nodeOriginTop = nodeInfo.top
+        let selectorOriginHeight = this.selectorOriginState.height
+        let selectorOriginTop = this.selectorOriginState.top
+        let heightPercentageIncrease = 1, height = nodeOriginHeight, top = nodeOriginTop
+        if(index == 1 || index == 2 || index == 3) {
+          heightPercentageIncrease = (selectorOriginHeight - movedHeight) / selectorOriginHeight
+        }else if (index == 5 || index == 6 || index == 7) {
+          heightPercentageIncrease = (selectorOriginHeight + movedHeight) / selectorOriginHeight
         }
-        canvas.drawSelectBox(this.$refs['select_box_canvas'], {width, height})
+        if(index == 4 || index == 8) {
+          height = nodeOriginHeight
+        }else {
+          height = heightPercentageIncrease * nodeOriginHeight
+        }
+        // if(height <= 20) height = 20
+        if(nodeOriginTop == selectorOriginTop){
+          console.log(1,top, movedHeight);
+          if(index == 1 || index == 2 || index == 3) {
+            top = selectorOriginTop + movedHeight
+          } else {
+            top = nodeOriginTop
+          }
+        }else if(nodeOriginTop + nodeOriginHeight == selectorOriginTop + selectorOriginHeight) {
+          console.log(2);
+          if(index == 5 || index == 6 || index == 7) {
+            top = selectorOriginTop + selectorOriginHeight + movedHeight - height
+          }else if(index == 1 || index == 2 || index == 3) {
+            top = nodeOriginTop + nodeOriginHeight - height
+          }else{
+            top = nodeOriginTop
+          }
+        }else {
+          console.log(3);
+          let heightPercentage = (nodeOriginTop - selectorOriginTop) / selectorOriginHeight
+          if(index == 1 || index == 2 || index == 3) {
+            let selectorHeight = selectorOriginHeight - movedHeight
+            let selectorTop = selectorOriginTop + movedHeight
+            top = selectorTop + (selectorHeight * heightPercentage)
+          }else if (index == 5 || index == 6 || index == 7) {
+            let selectorHeight = selectorOriginHeight + movedHeight
+            top = selectorOriginTop + (selectorHeight * heightPercentage)
+          }else {
+            top = top
+          }
+        }
+        return {
+          height,
+          top
+        }
       },
       paneRMouseDown(e) {
         let isOnBoard = this.isOnBoard(e)
@@ -367,39 +545,101 @@ import { ELPADDING } from '../constants/index'
           let element = this.$refs.drawing_board
           var x = e.clientX - element.getBoundingClientRect().left;
           var y = e.clientY - element.getBoundingClientRect().top;
-          this.paneRMouseDownX = x
-          this.paneRMouseDownY = y
-          this.selectingBoxleft = x
-          this.selectingBoxTop = y
+          this.mouseDownX = x
+          this.mouseDownY = y
+          this.selectingBoxInfo.selectingBoxleft = x
+          this.selectingBoxInfo.selectingBoxTop = y
           this.isSelecting = true
         }
       },
       paneRMouseMove(e) {
         if(this.isSelecting) {
-          let element = this.$refs.drawing_board
-          var currentX = e.clientX - element.getBoundingClientRect().left;
-          var currentY = e.clientY - element.getBoundingClientRect().top;
-          let width = currentX - this.paneRMouseDownX
-          let height = currentY - this.paneRMouseDownY
-          if(width < 0) {
-            this.selectingBoxleft = currentX
-          }
-          if(height < 0) {
-            this.selectingBoxTop = currentY
-          }
-          this.selectingBoxWidth = Math.abs(width)
-          this.selectingBoxHeight = Math.abs(height)
+          this.createSelectingBox(e)
+        } else if(this.isNodeMouseDown) {
+          this.moveNodes(e)
         }
       },
-      paneRMouseUp() {
-        this.isSelecting = false
-        this.selectingBoxHeight = 0
-        this.selectingBoxWidth = 0
-
+      createSelectingBox(e) {
+        let element = this.$refs.drawing_board
+        var currentX = e.clientX - element.getBoundingClientRect().left;
+        var currentY = e.clientY - element.getBoundingClientRect().top;
+        let width = currentX - this.mouseDownX
+        let height = currentY - this.mouseDownY
+        if(width < 0) {
+          this.selectingBoxInfo.selectingBoxleft = currentX
+        }
+        if(height < 0) {
+          this.selectingBoxInfo.selectingBoxTop = currentY
+        }
+        this.selectingBoxInfo.selectingBoxWidth = Math.abs(width)
+        this.selectingBoxInfo.selectingBoxHeight = Math.abs(height)
       },
       getSelectedNodes() {
-        for(let node of this.nodes) {
+        let selectedNodes = []
+        for(let nodeId in this.nodes) {
+          let node = this.nodes[nodeId]
+          let { top, left, width, height} = node
+          let endTop = top + height
+          let endLeft = width + left
+          let selectorEndLeft = this.selectingBoxInfo.selectingBoxleft + this.selectingBoxInfo.selectingBoxWidth
+          let selectorEndTop = this.selectingBoxInfo.selectingBoxTop + this.selectingBoxInfo.selectingBoxHeight
+          let isContainerIn = top >= this.selectingBoxInfo.selectingBoxTop && left >= this.selectingBoxInfo.selectingBoxleft && endTop <= selectorEndTop && endLeft <= selectorEndLeft
+          if(isContainerIn) {
+            selectedNodes.push(node)
+          }
+        }
+        this.selectNodes(selectedNodes)
+      },
+      onNodeMouseDown(e) {
+        this.$nextTick(() => {
+          this.mouseDownX = e.clientX
+          this.mouseDownY = e.clientY
+          this.selectedNodesOriginState = this.getSelectedNodesOriginState(e)
+          this.selectorOriginState = this.getSelectorOriginState(e)
+          this.isNodeMouseDown = true
+          console.log(1111,this.selectedNodesOriginState,this.selectorOriginState);
+        })
 
+      },
+      getSelectorOriginState(e) {
+        let rect = this.$refs.select_box.getBoundingClientRect()
+        let offsetX = e.clientX - rect.left
+        let offsetY = e.clientY - rect.top
+        return {
+          top: this.selectBoxInfo.top,
+          left: this.selectBoxInfo.left,
+          width: this.selectBoxInfo.width,
+          height: this.selectBoxInfo.height,
+          offsetX,
+          offsetY
+        }
+      },
+      moveNodes(event) {
+        this.updateSelectorPosition(event)
+        this.updateSelectedNodesPosition(event)
+      },
+      updateSelectorPosition(e) {
+        let { offsetX, offsetY } = this.selectorOriginState
+        let boardRect = this.$refs.drawing_board.getBoundingClientRect()
+        let mouseX = e.clientX - boardRect.left
+        let mouseY = e.clientY - boardRect.top
+        this.selectBoxInfo.left = mouseX - offsetX
+        this.selectBoxInfo.top = mouseY - offsetY
+      },
+      updateSelectedNodesPosition(e) {
+        let boardRect = this.$refs.drawing_board.getBoundingClientRect()
+        let mouseX = e.clientX - boardRect.left
+        let mouseY = e.clientY - boardRect.top
+        for(let node of this.selectedNodesOriginState) {
+          let { offsetX, offsetY, id } = node
+          // console.log(offsetX, offsetY);
+          let top = mouseY - offsetY
+          let left = mouseX - offsetX
+          this.updateNodeInfo({
+            id,
+            top,
+            left
+          })
         }
       }
     },
@@ -429,7 +669,6 @@ import { ELPADDING } from '../constants/index'
 .editInput {
   position: absolute;
   z-index: 999;
-  box-sizing: content-box;
   background-color: transparent;
   text-decoration: none;
 }

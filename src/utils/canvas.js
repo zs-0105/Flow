@@ -30,28 +30,22 @@ export const drawSelectBox = (selector, info) => {
   canvas.height = height
   const ctx = canvas.getContext('2d');
   let offset = 0; // 虚线偏移
-  // ctx.translate(-0.5, -0.5)
   function draw() {
-    // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Update the dash offset for flowing effect
     offset -= 0.1;
 
-    // Set the dash pattern
     ctx.strokeStyle = '#067BEF';
     ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]); // Dash pattern
-    ctx.lineDashOffset = -offset; // Apply the offset
-    // Draw the square
+    ctx.setLineDash([4, 4]); 
+    ctx.lineDashOffset = -offset; 
     ctx.strokeRect(
       0.5,
       0.5,
-      width - 1,
-      height - 1
+      Math.floor(width) - 1,
+      Math.floor(height) - 1
     );
     if(animationFrameId) cancelAnimationFrame(animationFrameId)//取消上一次动画防止卡顿
-    // Request animation frame for smooth animation
     animationFrameId = requestAnimationFrame(draw)
   }
   draw();
@@ -210,8 +204,8 @@ export const drawTriangle = (selector, info) => {
   canvas.height = height
 
   const x1 = width / 2; // 第一个顶点的x坐标
-  const y1 = 0; // 第一个顶点的y坐标
-  const x2 = 0; // 第二个顶点的x坐标
+  const y1 = borderWidth; // 第一个顶点的y坐标
+  const x2 = 0.5; // 第二个顶点的x坐标
   const y2 = height; // 第二个顶点的y坐标
   const x3 = width; // 第三个顶点的x坐标
   const y3 = height; // 第三个顶点的y坐标
@@ -243,17 +237,19 @@ export const drawCircle = (selector, info) => {
   }
   const ctx = canvas.getContext('2d');
   const defaultInfo = {
-    borderWidth: 2,
+    borderWidth: 6,
     fillColor: "#D6D6D6",
     width: 100,
     height: 100
   }
   info = {...defaultInfo, ...info}
   let {borderWidth, fillColor, width, height} = info
-  const radiusX = width / 2;
-  const radiusY = height / 2;
+  let radiusX = width / 2 - borderWidth;
+  let radiusY = height / 2 - borderWidth;
   const centerX = width / 2; // 圆心的x坐标
   const centerY = height / 2; // 圆心的y坐标
+  if(radiusX < 0) radiusX = 0
+  if(radiusY < 0) radiusY = 0
   canvas.width = width
   canvas.height = height
   ctx.lineWidth = borderWidth;
@@ -262,7 +258,7 @@ export const drawCircle = (selector, info) => {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.beginPath();
-  ctx.ellipse(centerX, centerY, radiusX - borderWidth / 2, radiusY - borderWidth / 2, 0, 0, 2 * Math.PI);
+  ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
   ctx.closePath();
 
   ctx.fill(); // 填充圆形

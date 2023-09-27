@@ -78,13 +78,12 @@
   
   /* 设置输入框样式 */
   input[type="text"], input[type="password"], textarea {
-    padding: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
     outline: none;
     font-size: 14px;
     width: 100%;
-    margin-bottom: 20px;
+    padding: 10px;
   }
   input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
     border-color: #1890ff;
