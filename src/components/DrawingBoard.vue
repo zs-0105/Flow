@@ -3,26 +3,26 @@
         <div class="drawing_board_wrap" @mousedown="boardMouseDown" @mousemove="startResize" :style="{width: `${boardWidth}px`,height: `${boardHight}px`}">
             <div class="drawing_board_content">
                 <canvas ref="drawing_board" class="drawing_board" :width="boardWidth" :height="boardHight"></canvas>
-                <node v-for="(value, key) in nodes" :key="key" :node-info="value" :cursor="cursor"></node>
+                <node v-for="(value, key) in nodes" :key="key" :node-info="value" :is-editing="isEditing" :is-selected="selectedNodesMap" :cursor="cursor"></node>
                 <textarea 
                   ref="editInput" 
                   class="editInput" 
-                  v-model="editorInfo.editorValue" 
+                  v-model="editorInfo.editorValue"
                   @blur="nodeEndedting" 
                   :style="{width: editorWidth, height: editorHeight, top: editorTop, left: editorLeft}" 
                   v-if="isEditing"
                 />
                 <div class="select_box" ref="select_box" :style="{width: selectorWidth, height: selectorHeight, top: selectorTop, left: selectorLeft}" v-show="selectBoxInfo.showSelector">
                   <canvas ref="select_box_canvas" :style="{'pointer-events':isShpaeControlorMouseDown ? 'auto' : 'none', cursor}"></canvas>
-                  <div class="shape_controlor" 
+                  <div class="shape_controlor"
                     v-for="index in 8"
-                    :key="index" 
-                    @mousedown="controlorMouseDown(index, $event)" 
+                    :key="index"
+                    @mousedown="controlorMouseDown(index, $event)"
                     :class="{activeCon: isShpaeControlorMouseDown && controlorIndex == index}"
                   ></div>
                   <div class="shape_rotater"></div>
                 </div>
-                <div class="selecting_box" 
+                <div class="selecting_box"
                   v-if="isSelecting"
                   :style="{
                     top:selectingBoxInfo.selectingBoxTop + 'px',
@@ -141,8 +141,9 @@ import { ELPADDING } from '../constants/index'
         selectedNodes:[],
         isNodeMouseDown: false,
         relativeCoords: {},
-        selectorOriginState: {},
-        selectedNodesOriginState: {}
+        selectorOriginState: {},//resize时初始的选择框状态
+        selectedNodesOriginState: {},//resize时初始的选中节点的状态
+        selectedNodesMap: {}
       }
     },
     mounted(){
@@ -167,10 +168,13 @@ import { ELPADDING } from '../constants/index'
             this.isShpaeControlorMouseDown = false
           }
           if(this.isSelecting) {
+            this.selectedNodesMap = {}
+            this.$store.commit('board/resetSelectedNodesMap', this.selectedNodesMap)
             this.getSelectedNodes()
             this.isSelecting = false
             this.selectingBoxInfo.selectingBoxHeight = 0
             this.selectingBoxInfo.selectingBoxWidth = 0
+            this.selectedNodes = []
           }
           this.isNodeMouseDown = false
         })
@@ -179,7 +183,6 @@ import { ELPADDING } from '../constants/index'
         let isOnBoard = this.isOnBoard(e)
         if(isOnBoard){
           this.selectBoxInfo.showSelector = false
-          this.$store.commit('board/resetSelectedNodesId')
         }
       },
       setPaneRMouseDown(info) {
@@ -204,7 +207,6 @@ import { ELPADDING } from '../constants/index'
           height: el.height,
           top: mouseY,
           left: mouseX,
-          isEditing: false,
           text: '',
           id: generateUUID()
         }
@@ -215,29 +217,15 @@ import { ELPADDING } from '../constants/index'
         this.editingNodeId = id
         this.$nextTick(() => {
           this.$refs.editInput.focus()
-          // this.updateNodeInfo({
-          //   id,
-          //   attr: 'isEditing',
-          //   value: true
-          // })
         })
       },
       nodeEndedting(e) {
-        let value = e.target.value
-        // let infos = [
-        //   {
-        //     id: this.editingNodeId,
-        //     attr: 'isEditing',
-        //     value: false
-        //   },
-        //   {
-        //     id: this.editingNodeId,
-        //     attr: 'text',
-        //     value: value
-        //   }
-        // ]
+        let text = e.target.value
         this.isEditing = false
-        // this.updateNodeInfo(infos)
+        this.updateNodeInfo({
+          id: this.editingNodeId,
+          text
+        })
       },
       updateNodeInfo(data) {
         if(Array.isArray(data)) {
@@ -251,17 +239,16 @@ import { ELPADDING } from '../constants/index'
       selectNodes(nodesInfo) {
         this.selectBoxInfo.showSelector = true
         let selectBox = this.$refs['select_box_canvas']
-          if(!nodesInfo.length) {
-            this.selectBoxInfo.showSelector = false
-            return;
-          }
-          let { width, height, top, left, ids} = this.getComputedInfo(nodesInfo)
-          this.selectBoxInfo.width = width
-          this.selectBoxInfo.height = height
-          this.selectBoxInfo.top = top
-          this.selectBoxInfo.left = left
-          this.$store.commit('board/updateSelectedNodesId', ids)
-          canvas.drawSelectBox(selectBox, {width, height})
+        if(!nodesInfo.length) {
+          this.selectBoxInfo.showSelector = false
+          return;
+        }
+        let { width, height, top, left} = this.getComputedInfo(nodesInfo)
+        this.selectBoxInfo.width = width
+        this.selectBoxInfo.height = height
+        this.selectBoxInfo.top = top
+        this.selectBoxInfo.left = left
+        canvas.drawSelectBox(selectBox, {width, height})
       },
       moveSelector(info) {
         let { top, left } = info
@@ -269,11 +256,11 @@ import { ELPADDING } from '../constants/index'
         this.selectBoxInfo.left = left 
       },
       getComputedInfo(nodesInfo) {
-        let minTop, minLeft, maxTop, maxLeft, ids = []
+        let minTop, minLeft, maxTop, maxLeft
+        this.selectedNodesMap = {}
         for(let index = 0; index < nodesInfo.length; index ++) {
           let node = nodesInfo[index]
-          let { top, left, width, height } = node
-          ids.push(node.id)
+          let { top, left, width, height, id } = node
           if(index == 0) {
             minTop = top
             minLeft = left
@@ -285,13 +272,15 @@ import { ELPADDING } from '../constants/index'
             if(top + height > maxTop) maxTop = top + height
             if(left + width > maxLeft) maxLeft = left + width
           }
+          this.selectedNodesMap[id] = true
         }
+        this.$store.commit('board/resetSelectedNodesMap')
+        this.$store.commit('board/updateSelectedNodesMap', this.selectedNodesMap)
         return {
           width: maxLeft - minLeft,
           height: maxTop - minTop,
           left: minLeft,
-          top: minTop,
-          ids
+          top: minTop
         }
       },
       controlorMouseDown(index, event) {
@@ -309,7 +298,7 @@ import { ELPADDING } from '../constants/index'
       },
       getSelectedNodesOriginState(e) {
         let nodes = []
-        for(let nodeId of this.selectedNodesId) {
+        for(let nodeId in this.selectedNodesMap) {
           let nodeDom = document.getElementById(nodeId)
           let rect = nodeDom.getBoundingClientRect()
           let offsetX = e.clientX - rect.left
@@ -406,7 +395,6 @@ import { ELPADDING } from '../constants/index'
             }else {
               movedHeight = this.selectorOriginState.height - 20
             }
-            console.log(movedHeight);
           }
           if(width >= 20) {
             for (let nodeInfo of this.selectedNodesOriginState) {
@@ -505,14 +493,12 @@ import { ELPADDING } from '../constants/index'
         }
         // if(height <= 20) height = 20
         if(nodeOriginTop == selectorOriginTop){
-          console.log(1,top, movedHeight);
           if(index == 1 || index == 2 || index == 3) {
             top = selectorOriginTop + movedHeight
           } else {
             top = nodeOriginTop
           }
         }else if(nodeOriginTop + nodeOriginHeight == selectorOriginTop + selectorOriginHeight) {
-          console.log(2);
           if(index == 5 || index == 6 || index == 7) {
             top = selectorOriginTop + selectorOriginHeight + movedHeight - height
           }else if(index == 1 || index == 2 || index == 3) {
@@ -521,7 +507,6 @@ import { ELPADDING } from '../constants/index'
             top = nodeOriginTop
           }
         }else {
-          console.log(3);
           let heightPercentage = (nodeOriginTop - selectorOriginTop) / selectorOriginHeight
           if(index == 1 || index == 2 || index == 3) {
             let selectorHeight = selectorOriginHeight - movedHeight
@@ -597,7 +582,6 @@ import { ELPADDING } from '../constants/index'
           this.selectedNodesOriginState = this.getSelectedNodesOriginState(e)
           this.selectorOriginState = this.getSelectorOriginState(e)
           this.isNodeMouseDown = true
-          console.log(1111,this.selectedNodesOriginState,this.selectorOriginState);
         })
 
       },
@@ -632,7 +616,6 @@ import { ELPADDING } from '../constants/index'
         let mouseY = e.clientY - boardRect.top
         for(let node of this.selectedNodesOriginState) {
           let { offsetX, offsetY, id } = node
-          // console.log(offsetX, offsetY);
           let top = mouseY - offsetY
           let left = mouseX - offsetX
           this.updateNodeInfo({

@@ -9,7 +9,7 @@ const board = {
         boardBkColor: '#fff',
         boardWidth: 1500,
         boardHight: 840,
-        selectedNodesId:[],
+        selectedNodesMap:{},
         isNodeMouseDown: false
     },
     mutations: {
@@ -24,32 +24,20 @@ const board = {
         let funName = nodeInfo.funName
         let selector = '#' + id
         // nodeInfo[attr] = value
-        // console.log(data);
         Object.assign(nodeInfo, data)
         // if(refresh) {
           requestAnimationFrame(() => {//requestAnimationFrame防止图像闪烁
             canvas[funName](selector, nodeInfo)
           })
+      },
+      updateSelectedNodesMap(state, data) {
+        // for(let id in data) {
+        //   Vue.set(state.selectedNodesMap, id, true)
         // }
-
+        state.selectedNodesMap = data
       },
-      // batchUpdateNodeInfo(state, data) {
-      //   let { ids, attr, value } = data
-      //   for(let id of ids) {
-      //       let nodeInfo = state.nodes[id]
-      //       let funName = nodeInfo.funName
-      //       let selector = '#' + id
-      //       nodeInfo[attr] = value
-      //       requestAnimationFrame(() => {//requestAnimationFrame防止图像闪烁
-      //         canvas[funName](selector, nodeInfo)
-      //       })
-      //   }
-      // },
-      updateSelectedNodesId(state, data) {
-        state.selectedNodesId = data
-      },
-      resetSelectedNodesId(state) {
-        state.selectedNodesId = []
+      resetSelectedNodesMap(state) {
+        state.selectedNodesMap = {}
       },
       setNodeMouseDown(state) {
         state.isNodeMouseDown = true

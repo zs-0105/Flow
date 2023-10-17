@@ -3,26 +3,29 @@
     <div class="node_content" 
       @mousemove="nodeMouseMove"
       @mousedown="nodeMousedown"
+      @mouseleave="nodeMouseleave"
       @dblclick="nodeDblClick"
-      @mouseleave="isInContent = false"
       :style="{cursor}">
       <div class="hover_dot"
-        v-show="isInContent"
+        v-show="isInContent || isOnBorder"
         v-for="item in dots"
         :key="item.id"
         @mousedown="dotMouseDown"
+        @mouseenter="isOnHoverDot = true"
+        @mouseleave="isOnHoverDot = false"
       >
       <!-- top:`${item.y}px`,left:`${item.x}px`, -->
       </div>
       <canvas ref="element"
         class="node"
         :id="id"
-        :style="{cursor:isInContent?'move':'default'}"
+        :style="{cursor:canvasCursor}"
       >
       </canvas>
       <div class="text_content" v-show="!isEditing">
         {{text}}
       </div>
+      <div class="red_dot" :style="{top:redDotY,left:redDotX}" v-show="showRedDot"></div>
     </div>
   </div>
 </template>
@@ -41,10 +44,14 @@ import { ELPADDING } from '../constants/index'
         cursor: {
           type: String,
           required: true
+        },
+        isEditing: {
+          type: Boolean,
+          default: false
         }
     },
     computed: {
-        ...mapState('board', ['selectedNodesId']),
+        ...mapState('board', ['selectedNodesMap']),
         id() {
           return this.nodeInfo.id
         },
@@ -66,8 +73,26 @@ import { ELPADDING } from '../constants/index'
         text() {
             return this.nodeInfo.text
         },
-        isEditing() {
-          return this.nodeInfo.isEditing || false
+        isSelected() {
+          return this.selectedNodesMap[this.id]
+        },
+        canvasCursor() {
+          if(this.isOnBorder && !this.isSelected){
+            return 'crosshair'
+          }else if(this.isOnBorder && this.isSelected) {
+            return 'move'
+          }else if(this.isInContent) {
+            return 'move'
+          }else {
+            return 'default'
+          }
+        },
+        showRedDot() {
+          if(this.isOnBorder && !this.isSelected && !this.isOnHoverDot) {
+            return true
+          }else {
+            return false
+          }
         }
     },
     mounted() {
@@ -79,6 +104,10 @@ import { ELPADDING } from '../constants/index'
         dots: [],
         isNodeMousedown: false,
         isInContent: false,//鼠标是否在画布有内容的区域
+        isOnBorder: false, //鼠标是否在边框线上
+        redDotX: '0px',
+        redDotY: '0px',
+        isOnHoverDot: false
       }
     },
     methods: {
@@ -122,9 +151,7 @@ import { ELPADDING } from '../constants/index'
           }
         },
         nodeMousedown(event) {
-          let nodeId = this.nodeInfo.id
-          let isSelected = this.selectedNodesId.findIndex(id => id == nodeId) != -1
-          if(!isSelected) {
+          if(!this.isSelected) {
             this.selectNode()
           }
           if(this.isInContent) {
@@ -133,6 +160,10 @@ import { ELPADDING } from '../constants/index'
           }
           this.$store.commit('node/setDragNodeInfo', this.nodeInfo);
         },
+        nodeMouseleave() {
+          this.isOnBorder = false
+          this.isInContent = false
+        },
         nodeMouseMove(event) {
           let element = this.$refs.element;
           let rect = element.getBoundingClientRect(); 
@@ -140,6 +171,11 @@ import { ELPADDING } from '../constants/index'
           let offsetY = event.clientY - rect.top;
           const ctx = this.$refs.element.getContext('2d');
           this.isInContent = ctx.isPointInPath(offsetX, offsetY);
+          this.isOnBorder = ctx.isPointInStroke(offsetX, offsetY)
+          if(this.isOnBorder && !this.isSelected) {
+            this.redDotX = event.clientX + 'px'
+            this.redDotY = event.clientY + 'px'
+          }
         },
         selectNode() {
           let { width, height, top, left, id } = this
@@ -180,6 +216,15 @@ import { ELPADDING } from '../constants/index'
         position: absolute;
         top: 0;
         left: 0;
+      }
+      .red_dot {
+        width: 6px;
+        height: 6px;
+        position: fixed;
+        z-index: 9999;
+        background-color: red;
+        border-radius: 50%;
+        pointer-events: none;
       }
     }
     .hover_dot:nth-child(1) {
