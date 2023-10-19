@@ -4,6 +4,8 @@
             <div class="drawing_board_content">
                 <canvas ref="drawing_board" class="drawing_board" :width="boardWidth" :height="boardHight"></canvas>
                 <node v-for="(value, key) in nodes" :key="key" :node-info="value" :is-editing="isEditing" :is-selected="selectedNodesMap" :cursor="cursor"></node>
+                <flow-link v-for="(value, key) in links" :key="key" :link-info="value">
+                </flow-link>
                 <textarea 
                   ref="editInput" 
                   class="editInput" 
@@ -42,13 +44,15 @@ import canvas from '@/utils/canvas.js'
 import node from '@/components/Node.vue'
 import { generateUUID } from '@/utils/utils.js'
 import { mapState } from 'vuex';
+import link from '@/components/Link.vue'
 import { ELPADDING } from '../constants/index'
   export default {
     components: {
-      node
+      node,
+      flowLink: link
     },
     computed: {
-      ...mapState('board', ['boardBkColor','boardWidth', 'boardHight', 'nodes', 'selectedNodesId']),
+      ...mapState('board', ['boardBkColor','boardWidth', 'boardHight', 'nodes', 'selectedNodesId', 'links']),
       selectorTop() {
         return this.selectBoxInfo.top + 'px'
       },
@@ -143,7 +147,9 @@ import { ELPADDING } from '../constants/index'
         relativeCoords: {},
         selectorOriginState: {},//resize时初始的选择框状态
         selectedNodesOriginState: {},//resize时初始的选中节点的状态
-        selectedNodesMap: {}
+        selectedNodesMap: {},
+        isDrawIngLink: false,
+        isDrawingLinkId: ''
       }
     },
     mounted(){
@@ -163,10 +169,12 @@ import { ELPADDING } from '../constants/index'
         this.$bus.$on('moveSelector', this.moveSelector)
         this.$bus.$on('setPaneRMouseDown', this.setPaneRMouseDown)
         this.$bus.$on('nodeMouseDown', this.onNodeMouseDown)
+        this.$bus.$on('startDrawLink', this.onStartDrawLink)
         document.addEventListener('mouseup', () => {
           if(this.isShpaeControlorMouseDown) {
             this.isShpaeControlorMouseDown = false
           }
+          if(this.isDrawIngLink) this.isDrawIngLink = false
           if(this.isSelecting) {
             this.selectedNodesMap = {}
             this.$store.commit('board/resetSelectedNodesMap', this.selectedNodesMap)
@@ -542,6 +550,8 @@ import { ELPADDING } from '../constants/index'
           this.createSelectingBox(e)
         } else if(this.isNodeMouseDown) {
           this.moveNodes(e)
+        } else if(this.isDrawIngLink) {
+          this.drawLink(e)
         }
       },
       createSelectingBox(e) {
@@ -583,7 +593,50 @@ import { ELPADDING } from '../constants/index'
           this.selectorOriginState = this.getSelectorOriginState(e)
           this.isNodeMouseDown = true
         })
-
+      },
+      onStartDrawLink(e) {
+        // this.mouseDownX = e.clientX
+        // this.mouseDownY = e.clientY
+        this.isDrawIngLink = true
+        let linkType = this.getLinkType()
+        let arrowType = this.getArrowType()
+        let linkWidth = this.getLinkWidth()
+        let linkColor = this.getLinkColor()
+        let boardRect = this.$refs.drawing_board.getBoundingClientRect()
+        let mouseX = e.clientX - boardRect.left
+        let mouseY = e.clientY - boardRect.top
+        let id = 'link' + Date.now()
+        this.isDrawingLinkId = id
+        let newLinkInfo = {
+          id,
+          start: {
+            x: mouseX,
+            y: mouseY
+          },
+          end: {
+            x: mouseX,
+            y: mouseY
+          },
+          linkType,
+          arrowType,
+          linkWidth,
+          linkColor,
+          width: 100,
+          height: 100
+        }
+        this.$store.commit('board/addLink', newLinkInfo)
+      },
+      getLinkType() {
+        return 'straightlink'
+      },
+      getArrowType() {
+        return 'solidArrow'
+      },
+      getLinkWidth() {
+        return 2
+      },
+      getLinkColor() {
+        return '#000'
       },
       getSelectorOriginState(e) {
         let rect = this.$refs.select_box.getBoundingClientRect()
@@ -624,6 +677,19 @@ import { ELPADDING } from '../constants/index'
             left
           })
         }
+      },
+      drawLink(e) {
+        let boardRect = this.$refs.drawing_board.getBoundingClientRect()
+        let mouseX = e.clientX - boardRect.left
+        let mouseY = e.clientY - boardRect.top
+        let id = this.isDrawingLinkId
+        this.$store.commit('board/updateLinkInfo', {
+          id,
+          end: {
+            x: mouseX,
+            y: mouseY
+          }
+        })
       }
     },
   }

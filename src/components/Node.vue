@@ -151,6 +151,10 @@ import { ELPADDING } from '../constants/index'
           }
         },
         nodeMousedown(event) {
+          if(this.isOnBorder) {
+            this.$bus.$emit('startDrawLink', event)
+            return;
+          }
           if(!this.isSelected) {
             this.selectNode()
           }

@@ -6,6 +6,7 @@ const board = {
     state: {
       // 状态
         nodes: {},
+        links: {},
         boardBkColor: '#fff',
         boardWidth: 1500,
         boardHight: 840,
@@ -44,6 +45,14 @@ const board = {
       },
       resetNodeMouseDown(state) {
         state.isNodeMouseDown = false
+      },
+      addLink(state, data) {
+        Vue.set(state.links, data.id, data)
+      },
+      updateLinkInfo(state, data) {
+        let { id } = data
+        let linkInfo = state.links[id]
+        Object.assign(linkInfo, data)
       },
     },
     actions: {
