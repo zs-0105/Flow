@@ -11,7 +11,17 @@ const board = {
         boardWidth: 1500,
         boardHight: 840,
         selectedNodesMap:{},
-        isNodeMouseDown: false
+        // isNodeMouseDown: false,
+        cursor: 'default',
+        mouseInfo: { //记录鼠标在元素上的信息
+          isOnNodeContent: false,
+          isOnNodeBorder: false,
+          isNodeSelected: false, //node/link是否被选择
+          isNearLinkStart: false,
+          isNearLinkEnd: false,
+          isDrawIng: false,
+          isNearLink: false
+        }
     },
     mutations: {
       // 修改状态的方法
@@ -40,12 +50,12 @@ const board = {
       resetSelectedNodesMap(state) {
         state.selectedNodesMap = {}
       },
-      setNodeMouseDown(state) {
-        state.isNodeMouseDown = true
-      },
-      resetNodeMouseDown(state) {
-        state.isNodeMouseDown = false
-      },
+      // setNodeMouseDown(state) {
+      //   state.isNodeMouseDown = true
+      // },
+      // resetNodeMouseDown(state) {
+      //   state.isNodeMouseDown = false
+      // },
       addLink(state, data) {
         Vue.set(state.links, data.id, data)
       },
@@ -54,6 +64,11 @@ const board = {
         let linkInfo = state.links[id]
         Object.assign(linkInfo, data)
       },
+      updateMouseInfo(state, data) {
+        for(let key in data) {
+          state.mouseInfo[key] = data[key]
+        }
+      }
     },
     actions: {
       // 异步操作和业务逻辑

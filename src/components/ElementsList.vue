@@ -98,8 +98,7 @@ import { mapState } from 'vuex';
                     height: 16,
                     cornerRadius: 5,
                     borderWidth: 1
-                },
-                text:''
+                }
             },
             {
                 name: 'circle',
@@ -110,8 +109,7 @@ import { mapState } from 'vuex';
                     borderWidth: 1,
                     width: 26,
                     height: 26
-                },
-                text:''
+                }
             },
             {
                 name: 'triangle',
@@ -121,8 +119,7 @@ import { mapState } from 'vuex';
                     width: 26,
                     height: 26,
                     borderWidth: 1,
-                },
-                text:''
+                }
             },
             {
                 name: 'rhombus',
@@ -132,8 +129,7 @@ import { mapState } from 'vuex';
                     width: 26,
                     height: 20,
                     borderWidth: 1,
-                },
-                text:''
+                }
             }
         ],
         currentCanvas:'',

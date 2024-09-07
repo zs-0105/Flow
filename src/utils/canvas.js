@@ -50,7 +50,9 @@ export const drawSelectBox = (selector, info) => {
   }
   draw();
 }
-
+// document.addEventListener('mouseup',() => {
+//   if(animationFrameId) cancelAnimationFrame(animationFrameId)//取消上一次动画防止卡顿
+// })
 // 清空画布内容
 export const clearCanvas = (canvas) => {
   const ctx = canvas.getContext('2d');

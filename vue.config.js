@@ -9,6 +9,9 @@ function resolve(dir) {
 module.exports = {
   lintOnSave:false,
   chainWebpack: (config) => {
+    if (process.env.NODE_ENV === 'development') {
+      config.devtool('source-map')
+    }
     config.module.rules.delete('svg')
     config.resolve.symlinks(true)
     config.resolve.alias

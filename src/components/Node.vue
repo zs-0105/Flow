@@ -1,11 +1,15 @@
 <template>
-  <div class='node_wrap' :style="{top:`${top}px`, left:`${left}px`, width: `${width}px`, height: `${height}px`}">
+  <div class='node_wrap' ref="nodeWrap" 
+    :style="{top:`${top - ELPADDING}px`, left:`${left - ELPADDING}px`, width: `${width}px`, height: `${height}px`, 'z-index': nodeInfo.index, padding: ELPADDING + 'px' }"
+    @mousemove="nodeMouseMove"
+  >
+      <!-- @mousemove="nodeMouseMove" -->
     <div class="node_content" 
-      @mousemove="nodeMouseMove"
       @mousedown="nodeMousedown"
       @mouseleave="nodeMouseleave"
       @dblclick="nodeDblClick"
-      :style="{cursor}">
+      ref="nodeContent"
+      >
       <div class="hover_dot"
         v-show="isInContent || isOnBorder"
         v-for="item in dots"
@@ -16,11 +20,11 @@
       >
       <!-- top:`${item.y}px`,left:`${item.x}px`, -->
       </div>
-      <canvas ref="element"
+      <canvas ref="nodeCanvas"
         class="node"
         :id="id"
-        :style="{cursor:canvasCursor}"
       >
+      <!-- :style="{cursor:canvasCursor}" -->
       </canvas>
       <div class="text_content" v-show="!isEditing">
         {{text}}
@@ -41,10 +45,10 @@ import { ELPADDING } from '../constants/index'
             type: Object,
             required: true
         },
-        cursor: {
-          type: String,
-          required: true
-        },
+        // cursor: {
+        //   type: String,
+        //   required: true
+        // },
         isEditing: {
           type: Boolean,
           default: false
@@ -107,13 +111,14 @@ import { ELPADDING } from '../constants/index'
         isOnBorder: false, //鼠标是否在边框线上
         redDotX: '0px',
         redDotY: '0px',
-        isOnHoverDot: false
+        isOnHoverDot: false,
+        ELPADDING: ELPADDING
       }
     },
     methods: {
         init() {
             let funName = this.nodeInfo.funName
-            canvas[funName](this.$refs.element)
+            canvas[funName](this.$refs.nodeCanvas)
             this.dots = this.nodeInfo.dots
             if(!this.nodeInfo.dots) {
               this.resetDots()
@@ -151,35 +156,63 @@ import { ELPADDING } from '../constants/index'
           }
         },
         nodeMousedown(event) {
-          if(this.isOnBorder) {
-            this.$bus.$emit('startDrawLink', event)
+          if(this.isOnBorder && !this.isSelected) {
+            this.$bus.$emit('startDrawLink', event, (newLinkInfo) => {
+              let outLinks = [...this.nodeInfo.outLinks]
+              outLinks.push({
+                id: newLinkInfo.id,
+                offsetX: event.offsetX,
+                offsetY: event.offsetY
+              })
+              this.$store.commit('board/updateNodeInfo', {
+                id: this.nodeInfo.id,
+                outLinks: outLinks
+              })
+            })
             return;
           }
-          if(!this.isSelected) {
-            this.selectNode()
-          }
           if(this.isInContent) {
-            this.$store.commit('board/setNodeMouseDown')
+            if(!this.isSelected) {
+              this.selectNode()
+            }
             this.$bus.$emit('nodeMouseDown', event)
           }
           this.$store.commit('node/setDragNodeInfo', this.nodeInfo);
         },
         nodeMouseleave() {
-          this.isOnBorder = false
-          this.isInContent = false
+          this.isOnBorder = false;
+          this.isInContent = false;
         },
         nodeMouseMove(event) {
-          let element = this.$refs.element;
-          let rect = element.getBoundingClientRect(); 
+          let element = this.$refs.nodeCanvas;
+          let rect = element.getBoundingClientRect();
           let offsetX = event.clientX - rect.left;
           let offsetY = event.clientY - rect.top;
-          const ctx = this.$refs.element.getContext('2d');
+          const ctx = element.getContext('2d');
           this.isInContent = ctx.isPointInPath(offsetX, offsetY);
-          this.isOnBorder = ctx.isPointInStroke(offsetX, offsetY)
+          this.isOnBorder = ctx.isPointInStroke(offsetX, offsetY);
           if(this.isOnBorder && !this.isSelected) {
-            this.redDotX = event.clientX + 'px'
-            this.redDotY = event.clientY + 'px'
+            this.redDotX = event.clientX + 'px';
+            this.redDotY = event.clientY + 'px';
           }
+          if (!this.isSelected) {
+            // dispatchEvent(event, 'mousemove')
+          }
+          // let cursor = 'default'
+          // if(this.isOnBorder && !this.isSelected){
+          //   cursor = 'crosshair'
+          // }else if(this.isOnBorder && this.isSelected) {
+          //   cursor = 'move'
+          // }else if(this.isInContent) {
+          //   cursor = 'move'
+          // }
+          // console.log('nodeMouseMove', cursor, this.isInContent);
+          // this.$store.commit('board/updateCursor', cursor)
+          this.$store.commit('board/updateMouseInfo', {
+            isOnNodeContent: this.isInContent,
+            isOnNodeBorder: this.isOnBorder,
+            isNodeSelected: this.isSelected,
+          })
         },
         selectNode() {
           let { width, height, top, left, id } = this
@@ -203,7 +236,36 @@ import { ELPADDING } from '../constants/index'
             let id = this.nodeInfo.id
             this.$bus.$emit('onEdit', id)
           }
+        },
+        dispatchEvent(event, type) {
+          let ctx = this.$refs.nodeCanvas.getContext('2d');
+          let rect = this.$refs.nodeCanvas.getBoundingClientRect();
+          let offsetX = event.clientX - rect.left;
+          let offsetY = event.clientY - rect.top;
+          let isInContent = ctx.isPointInPath(offsetX, offsetY)
+          // let isPointInStroke = ctx.isPointInPath(offsetX, offsetY)
+          if (!isInContent) {
+            this.$refs.nodeCanvas.style.pointerEvents = 'none';
+            this.$refs.nodeContent.style.pointerEvents = 'none';
+            this.$refs.nodeWrap.style.pointerEvents = 'none';
+
+            const underneathElement = document.elementFromPoint(event.clientX, event.clientY);
+              // console.log(underneathElement);
+              const clickEvent = new MouseEvent(type, {
+                bubbles: true, // 事件冒泡
+                cancelable: true, // 事件是否可以取消
+                view: window, // 事件发生在的视图 (window)
+                clientX: event.clientX, // 点击位置的 x 坐标
+                clientY: event.clientY  // 点击位置的 y 坐标
+            });
+
+            // 派发事件到目标元素
+            underneathElement.dispatchEvent(clickEvent);
+            this.$refs.nodeCanvas.style.pointerEvents = 'auto';
+            this.$refs.nodeContent.style.pointerEvents = 'auto';
+            this.$refs.nodeWrap.style.pointerEvents = 'auto';
         }
+      },
     },
   }
 </script>
@@ -212,6 +274,7 @@ import { ELPADDING } from '../constants/index'
   /* @import url(); 引入公共css类 */
 .node_wrap {
     position: absolute;
+    box-sizing: content-box;
     .node_content {
       width: 100%;
       height: 100%;

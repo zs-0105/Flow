@@ -164,3 +164,6 @@
 .hide {
   display: none;
 }
+canvas {
+  aspect-ratio: auto 192 / 161;
+}
