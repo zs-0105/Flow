@@ -34,7 +34,8 @@
 </template>
 
 <script>
-  const PADDING = 10
+import { mapState } from 'vuex';
+  const ELPADDING = 10
   const EDITORDEFAULTWIDTH = 100
   const EDITORDEFAULTHEIFHT = 18
   const EDITORPADDING = 5
@@ -48,6 +49,7 @@
         }
     },
     computed: {
+      ...mapState('board', ['mouseInfo']),
       id() {
         return this.linkInfo.id
       },
@@ -55,34 +57,34 @@
         let startPointTop = this.linkInfo.start.y
         let endPointTop = this.linkInfo.end.y
         let mintop = Math.min(startPointTop, endPointTop)
-        return mintop - PADDING
+        return mintop - ELPADDING
       },
       left() {
         let startPointLeft = this.linkInfo.start.x
         let endPointLeft = this.linkInfo.end.x
         let minleft = Math.min(startPointLeft, endPointLeft)
-        return minleft - PADDING
+        return minleft - ELPADDING
       },
       width() {
         let startPointLeft = this.linkInfo.start.x
         let endPointLeft = this.linkInfo.end.x
         let maxleft = Math.max(startPointLeft, endPointLeft)
-        return maxleft - this.left + PADDING
+        return maxleft - this.left + ELPADDING
       },
       height() {
         let startPointTop = this.linkInfo.start.y
         let endPointTop = this.linkInfo.end.y
         let maxtop = Math.max(startPointTop, endPointTop)
-        return maxtop - this.top + PADDING
+        return maxtop - this.top + ELPADDING
       },
       index() {
         return this.linkInfo.index
       },
-      cursor() {
-        if(this.isMouseNearStart || this.isMouseNearEnd) return 'move'
-        console.log(this.isNearLink && !this.isDrawIng ? 'pointer' : 'default');
-        return this.isNearLink && !this.isDrawIng ? 'pointer' : 'default'
-      }
+      // cursor() {
+      //   if(this.isMouseNearStart || this.isMouseNearEnd) return 'move'
+      //   console.log(this.isNearLink && !this.isDrawIng ? 'pointer' : 'default');
+      //   return this.isNearLink && !this.isDrawIng ? 'pointer' : 'default'
+      // }
     },
     data () {
       return {
@@ -116,6 +118,13 @@
         },
         deep: true
       },
+      isDrawIng: {
+        handler(newval) {
+          this.$store.commit('board/updateMouseInfo', {
+            isDrawingLink: newval,
+          })
+        }
+      }
     },
     methods: {
       setEvent() {
@@ -125,27 +134,173 @@
             let mouseX = e.clientX - boardRect.left
             let mouseY = e.clientY - boardRect.top
             let id = this.linkInfo.id
+            this.$refs.link.style.pointerEvents = 'none'
+            let underneathElement = document.elementFromPoint(e.clientX, e.clientY)
+            if (underneathElement && underneathElement.classList.contains('canvas_link')) {
+              underneathElement.style.pointerEvents = 'none'
+            }
             if(this.isMouseNearStart) {
-              this.$store.commit('board/updateLinkInfo', {
-                id,
-                start: {
+              let start
+              if (underneathElement && underneathElement.classList.contains('node')) {
+                start = this.getNearestNodeLinkPoint(e, underneathElement)
+              } else {
+                start = {
                   x: mouseX,
                   y: mouseY
-                },
+                }
+              }
+              this.$store.commit('board/updateLinkInfo', {
+                id,
+                start
               })
             }else{
-              this.$store.commit('board/updateLinkInfo', {
-                id,
-                end: {
+              let end
+              if (underneathElement && underneathElement.classList.contains('node')) {
+                end = this.getNearestNodeLinkPoint(e, underneathElement)
+              } else {
+                end = {
                   x: mouseX,
                   y: mouseY
-                },
+                }
+              }
+              this.$store.commit('board/updateLinkInfo', {
+                id,
+                end
               })
             }
             // this.drawLink(this.linkInfo)
           }
         })
-        document.addEventListener('mouseup', () => this.isDrawIng = false)
+        document.addEventListener('mouseup', (e) => {
+          if (this.isDrawIng) {
+            let underneathElement = document.elementFromPoint(e.clientX, e.clientY)
+            console.log(underneathElement);
+            if (underneathElement && underneathElement.classList.contains('node')) {
+              let nodeId = underneathElement.id
+              let nodeInfo = this.$parent.nodes[nodeId]
+              if (!this.isMouseNearStart) {
+                let inLinks = JSON.parse(JSON.stringify(nodeInfo.inLinks))
+                let existIndex = inLinks.findIndex(i => i.id == this.id)
+                if (existIndex >= 0) {
+                  inLinks[existIndex] = {
+                    id: this.id,
+                    offsetX: this.linkInfo.end.x - nodeInfo.left,
+                    offsetY: this.linkInfo.end.y - nodeInfo.top
+                  }
+                } else {
+                  inLinks.push({
+                    id: this.id,
+                    offsetX: this.linkInfo.end.x - nodeInfo.left,
+                    offsetY: this.linkInfo.end.y - nodeInfo.top
+                  })
+                }
+                console.warn('board/updateNodeInfo');
+                // 删除旧连接node中inlink
+                if (this.linkInfo.targetNodeId && nodeId !== this.linkInfo.targetNodeId) {
+                  debugger
+                  console.log(this.linkInfo , this.$parent.links[this.id]);
+                  
+                  let oldInlinks = JSON.parse(JSON.stringify(this.$parent.nodes[this.linkInfo.targetNodeId].inLinks))
+                  let index = oldInlinks.findIndex(i => i.id == this.id)
+                  oldInlinks.splice(index, 1)
+                  this.$store.commit('board/updateNodeInfo', {
+                    id: this.linkInfo.targetNodeId,
+                    inLinks: oldInlinks
+                  })
+                }
+                this.$store.commit('board/updateNodeInfo', {
+                  id: nodeId,
+                  inLinks
+                })
+                this.$store.commit('board/updateLinkInfo', {
+                  id: this.id,
+                  targetNodeId: nodeId
+                })
+              } else {
+                let outLinks = JSON.parse(JSON.stringify(nodeInfo.outLinks))
+                let existIndex = outLinks.findIndex(i => i.id == this.id)
+                if (existIndex >= 0) {
+                  outLinks[existIndex] = {
+                    id: this.id,
+                    offsetX: this.linkInfo.start.x - nodeInfo.left,
+                    offsetY: this.linkInfo.start.y - nodeInfo.top
+                  }
+                } else {
+                  outLinks.push({
+                    id: this.id,
+                    offsetX: this.linkInfo.start.x - nodeInfo.left,
+                    offsetY: this.linkInfo.start.y - nodeInfo.top
+                  })
+                }
+                console.warn('board/updateNodeInfo');
+                // 删除旧连接node中outlink
+                if (this.linkInfo.sourceNodeId && nodeId !== this.linkInfo.sourceNodeId) {
+                  let oldOutlinks = JSON.parse(JSON.stringify(this.$parent.nodes[this.linkInfo.sourceNodeId].outLinks))
+                  let index = oldOutlinks.findIndex(i => i.id == this.id)
+                  oldOutlinks.splice(index, 1)
+                  this.$store.commit('board/updateNodeInfo', {
+                    id: this.linkInfo.sourceNodeId,
+                    outLinks: oldOutlinks
+                  })
+                }
+                this.$store.commit('board/updateNodeInfo', {
+                  id: nodeId,
+                  outLinks
+                })
+                this.$store.commit('board/updateLinkInfo', {
+                  id: this.id,
+                  sourceNodeId: nodeId
+                })
+              }
+            } else {
+              // 断连
+              if (!this.isMouseNearStart) {
+                let targetNodeId = this.$parent.links[this.id].targetNodeId
+                if (targetNodeId) {
+                  let nodeInfo = this.$parent.nodes[targetNodeId]
+                  let inLinks = JSON.parse(JSON.stringify(nodeInfo.inLinks))
+                  let existIndex = inLinks.findIndex(i => i.id == this.id)
+                  if (existIndex >= 0) {
+                    inLinks.splice(existIndex, 1)
+                  }
+                  this.$store.commit('board/updateNodeInfo', {
+                    id: targetNodeId,
+                    inLinks
+                  })
+                } 
+                this.$store.commit('board/updateLinkInfo', {
+                  id: this.id,
+                  targetNodeId: ''
+                })
+              } else {
+                let sourceNodeId = this.$parent.links[this.id].sourceNodeId
+                if (sourceNodeId) {
+                  let nodeInfo = this.$parent.nodes[sourceNodeId]
+                  let outLinks = JSON.parse(JSON.stringify(nodeInfo.outLinks))
+                  let existIndex = outLinks.findIndex(i => i.id == this.id)
+                  if (existIndex >= 0) {
+                    outLinks.splice(existIndex, 1)
+                  }
+                  this.$store.commit('board/updateNodeInfo', {
+                    id: sourceNodeId,
+                    outLinks
+                  })
+                }
+                this.$store.commit('board/updateLinkInfo', {
+                  id: this.id,
+                  sourceNodeId: ''
+                })
+              }
+            }
+          }
+          // if (this.isDrawingLink) {
+            setTimeout(() => {
+              this.$refs.link.style.pointerEvents = 'auto' 
+            });
+            this.isDrawIng = false
+          // }
+
+        })
         // console.log('mousemove'+this.linkInfo.id);
         // this.$bus.$on('mousemove'+this.linkInfo.id, this.onLinkMousemove)
       },
@@ -194,27 +349,48 @@
         }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.lineWidth = linkWidth;
-        this.drawArrow(ctx, from.x, from.y, to.x, to.y, size)
+        // ctx.beginPath();
+        // ctx.moveTo(from.x, from.y);
+        // ctx.lineTo(to.x, to.y);
+        // ctx.stroke();
+        // this.drawArrow(ctx, from.x, from.y, to.x, to.y, size)
+        // this.drawSolidArrow(ctx, from.x, from.y, to.x, to.y, size)
+        this.drawDashedArrow(ctx, from.x, from.y, to.x, to.y, size)
+        
       },
       drawArrow(ctx, x1, y1, x2, y2, size) {
+        // 计算箭头的角度
         const angle = Math.atan2(y2 - y1, x2 - x1);
+        
+        // 开始绘制主线
         ctx.beginPath();
-        ctx.moveTo(x1, y1)
-        ctx.lineTo(x2, y2)
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();  // 绘制箭头的主线
+
+        // 绘制箭头的左侧线
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
         ctx.lineTo(
           x2 - size * Math.cos(angle - Math.PI / 6),
           y2 - size * Math.sin(angle - Math.PI / 6)
         );
+        ctx.stroke();
+
+        // 绘制箭头的右侧线
+        ctx.beginPath();
         ctx.moveTo(x2, y2);
         ctx.lineTo(
           x2 - size * Math.cos(angle + Math.PI / 6),
-          y2- size * Math.sin(angle + Math.PI / 6)
+          y2 - size * Math.sin(angle + Math.PI / 6)
         );
         ctx.stroke();
-        ctx.closePath();
+
         // 设置文本样式
-        ctx.font = "12px Arial"; // 设置文本字体和大小
-        ctx.fillStyle = "black"; // 设置文本颜色
+        ctx.font = "12px Arial";  // 设置文本字体和大小
+        ctx.fillStyle = "black";  // 设置文本颜色
+        
+        // ctx.closePath(); 不需要了，因为每条路径已经有自己的 beginPath 和 stroke
       },
       drawDashedArrow(ctx, x1, y1, x2, y2, size) {
         const angle = Math.atan2(y2 - y1, x2 - x1);
@@ -224,13 +400,19 @@
           x2 - size * Math.cos(angle),
           y2 - size * Math.sin(angle)
         );
+        ctx.stroke();
+
+        ctx.beginPath();
         ctx.moveTo(x2, y2);
         ctx.lineTo(
           x2 - size * Math.cos(angle - Math.PI / 8), 
-          y2 - size * Math.sin(angle - Math.PI / 8));
+          y2 - size * Math.sin(angle - Math.PI / 8)
+        );
+        ctx.stroke();
         ctx.lineTo(
           x2 - size * Math.cos(angle + Math.PI / 8), 
-          y2 - size * Math.sin(angle + Math.PI / 8));
+          y2 - size * Math.sin(angle + Math.PI / 8)
+        );
         ctx.closePath();
         ctx.stroke();
         ctx.fillStyle = '#fff'
@@ -244,6 +426,11 @@
           x2 - size * Math.cos(angle),
           y2 - size * Math.sin(angle)
         );
+        ctx.moveTo(x2, y2);
+        ctx.stroke();
+        ctx.closePath();
+
+        ctx.beginPath();
         ctx.moveTo(x2, y2);
         ctx.lineTo(
           x2 - size * Math.cos(angle - Math.PI / 8), 
@@ -268,7 +455,9 @@
       },
       onLinkMousemove(event) {
         // console.log(event);
-        if(this.isDrawIng) return;
+        if(this.isDrawingLink) {
+          return;
+        }
         let rect2 = this.$parent.$refs.drawing_board.getBoundingClientRect()
         let mouseX = event.clientX - rect2.left;
         let mouseY = event.clientY - rect2.top;
@@ -295,7 +484,7 @@
         this.$store.commit('board/updateMouseInfo', {
           isNearLinkStart: this.isMouseNearStart,
           isNearLinkEnd: this.isMouseNearEnd,
-          isDrawIng: this.isDrawIng,
+          isDrawingLink: this.isDrawIng,
           isNearLink: this.isNearLink
         })
       },
@@ -518,6 +707,53 @@
         this.$nextTick(() => {
           this.$refs.textInput.focus()
         })
+      },
+      getNearestNodeLinkPoint(e, underneathElement) {
+        let nodeId = underneathElement.id
+        let nodeCom = this.$parent.$refs[nodeId][0]
+        let ctx = underneathElement.getContext('2d')
+        let boardRect = this.$parent.$refs.drawing_board.getBoundingClientRect()
+        let mouseX = e.clientX - boardRect.left
+        let mouseY = e.clientY - boardRect.top
+        let rect = nodeCom.$el.getBoundingClientRect();
+        let offsetX = e.clientX - rect.left;
+        let offsetY = e.clientY - rect.top;
+        let isOnBorder = ctx.isPointInStroke(offsetX - ELPADDING, offsetY - ELPADDING)
+        let nodeInfo = this.$parent.nodes[nodeId]
+        if (isOnBorder) {
+          return {
+            x: mouseX,
+            y: mouseY
+          }
+        } else {
+          let closestNodeCoord = this.findClosestNode(nodeInfo.dots, { x: offsetX, y: offsetY })
+          return {
+            x: rect.left + closestNodeCoord.x - boardRect.left + ELPADDING,
+            y: rect.top + closestNodeCoord.y - boardRect.top + ELPADDING
+          }
+        }
+      },
+      findClosestNode(nodes, point) {
+        let closestNode = null;
+        let minDistance = Infinity;
+
+        nodes.forEach(node => {
+          // 计算每个节点与给定点的距离
+          const distance = Math.sqrt(
+            Math.pow(node.x - point.x, 2) + Math.pow(node.y - point.y, 2)
+          );
+
+          // 比较距离，找到最近的节点
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestNode = node;
+          }
+        });
+
+        return {
+          x: closestNode.x,
+          y: closestNode.y
+        };
       }
     },
   }

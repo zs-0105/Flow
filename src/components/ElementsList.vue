@@ -119,7 +119,29 @@ import { mapState } from 'vuex';
                     width: 26,
                     height: 26,
                     borderWidth: 1,
-                }
+                },
+                dots: [
+                    {
+                        "id": 1,
+                        "x": 50,
+                        "y": 1
+                    },
+                    {
+                        "id": 2,
+                        "x": 74,
+                        "y": 50
+                    },
+                    {
+                        "id": 3,
+                        "x": 50,
+                        "y": 99
+                    },
+                    {
+                        "id": 4,
+                        "x": 24,
+                        "y": 50
+                    }
+                ]
             },
             {
                 name: 'rhombus',

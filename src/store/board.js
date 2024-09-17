@@ -19,7 +19,7 @@ const board = {
           isNodeSelected: false, //node/link是否被选择
           isNearLinkStart: false,
           isNearLinkEnd: false,
-          isDrawIng: false,
+          isDrawingLink: false,
           isNearLink: false
         }
     },

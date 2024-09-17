@@ -20,6 +20,7 @@
                   <canvas ref="select_box_canvas" :style="{'pointer-events':isShpaeControlorMouseDown ? 'auto' : 'none', cursor}"></canvas>
                   <div class="shape_controlor"
                     v-for="index in 8"
+                    v-show="!isMoveingNode"
                     :key="index"
                     @mousedown="controlorMouseDown(index, $event)"
                     :class="{activeCon: isShpaeControlorMouseDown && controlorIndex == index}"
@@ -104,7 +105,13 @@ import { ELPADDING } from '../constants/index'
               return 'e-resize';
           }
         } else {
-          let { isOnNodeContent, isOnNodeBorder, isNodeSelected, isNearLinkStart, isNearLinkEnd, isDrawIng, isNearLink } = this.mouseInfo
+          let { isOnNodeContent, isOnNodeBorder, isNodeSelected, isNearLinkStart, isNearLinkEnd, isDrawingLink, isNearLink } = this.mouseInfo
+          if (isDrawingLink) {
+            return 'crosshair'
+          }
+          if (this.isMouseOnBoard) {
+            return 'default'
+          }
           if(isOnNodeBorder && !isNodeSelected){
             return 'crosshair'
           } else if(isOnNodeBorder && isNodeSelected) {
@@ -112,12 +119,12 @@ import { ELPADDING } from '../constants/index'
           } else if(isOnNodeContent) {
             return 'move'
           }
+          console.log(isOnNodeContent, isNearLinkStart, isNearLinkEnd);
+          
           if(isNearLinkStart || isNearLinkEnd) {
             return 'move'
-          } else if (isNearLink && !isDrawIng) {
+          } else if (isNearLink && !isDrawingLink) {
             return 'pointer'
-          } else if (isDrawIng) {
-            return 'crosshair'
           }
           return 'default'
         }
@@ -165,8 +172,10 @@ import { ELPADDING } from '../constants/index'
         selectorOriginState: {},//resize时初始的选择框状态
         selectedNodesOriginState: [],//resize时初始的选中节点的状态
         selectedNodesMap: {},
-        isDrawIngLink: false,
-        isDrawingLinkId: ''
+        // isDrawIngLink: false,
+        isDrawingLinkId: '',
+        isMoveingNode: false,
+        isMouseOnBoard: false
       }
     },
     mounted(){
@@ -192,7 +201,11 @@ import { ELPADDING } from '../constants/index'
           if(this.isShpaeControlorMouseDown) {
             this.isShpaeControlorMouseDown = false
           }
-          if(this.isDrawIngLink) this.isDrawIngLink = false
+          if(this.isDrawingLink) {
+            this.$store.commit('board/updateMouseInfo', {
+              isDrawingLink: false,
+            })
+          }
           if(this.isSelecting) {
             this.selectedNodesMap = {}
             this.$store.commit('board/resetSelectedNodesMap', this.selectedNodesMap)
@@ -203,6 +216,7 @@ import { ELPADDING } from '../constants/index'
             this.selectedNodes = []
           }
           this.isNodeMouseDown = false
+          this.isMoveingNode = false
         })
       },
       boardMouseDown(e) {
@@ -446,6 +460,8 @@ import { ELPADDING } from '../constants/index'
                 left,
                 width
               })
+              this.updateLinkOffsetX(index, nodeInfo, movedWidth)
+              this.updateDotsOffsetX(index, nodeInfo, movedWidth)
             }
             this.selectBoxInfo.left = left
             this.selectBoxInfo.width = width
@@ -459,9 +475,37 @@ import { ELPADDING } from '../constants/index'
                 height,
                 top
               })
+              this.updateLinkOffsetY(index, nodeInfo, movedHeight)
+              this.updateDotsOffsetY(index, nodeInfo, movedHeight)
             }
             this.selectBoxInfo.top = top
             this.selectBoxInfo.height = height
+          }
+
+          if (width >= 20 || height >= 20) {
+            for (let nodeInfo of this.selectedNodesOriginState) {
+              let nodeId = nodeInfo.id
+              let curNodeInfo = this.nodes[nodeId]
+              for (let linkInfo of curNodeInfo.inLinks) {
+                this.updateLinkInfo({
+                  id: linkInfo.id,
+                  end: {
+                    x: curNodeInfo.left + linkInfo.offsetX,
+                    y: curNodeInfo.top + linkInfo.offsetY
+                  }
+                })
+              }
+              for (let linkInfo of curNodeInfo.outLinks) {
+                this.updateLinkInfo({
+                  id: linkInfo.id,
+                  start: {
+                    x: curNodeInfo.left + linkInfo.offsetX,
+                    y: curNodeInfo.top + linkInfo.offsetY
+                  }
+                })
+              }
+            }
+              
           }
           canvas.drawSelectBox(this.$refs['select_box_canvas'], {width, height})
       },
@@ -515,6 +559,99 @@ import { ELPADDING } from '../constants/index'
           width,
           left
         }
+      },
+      updateLinkOffsetX(index, nodeInfo, movedWidth) {
+        let selectorOriginWidth = this.selectorOriginState.width
+        // let selectorOriginLeft = this.selectorOriginState.left
+        let curNodeInfo = this.nodes[nodeInfo.id]
+        let widthPercentageIncrease = 1
+        if(index == 3 || index == 4 || index == 5) {
+          widthPercentageIncrease = (selectorOriginWidth + movedWidth) / selectorOriginWidth
+        }else if (index == 1 || index == 7 || index == 8) {
+          widthPercentageIncrease = (selectorOriginWidth - movedWidth) / selectorOriginWidth
+        }
+        console.log(widthPercentageIncrease);
+        let outLinks = JSON.parse(JSON.stringify(nodeInfo.outLinks))
+        let inLinks = JSON.parse(JSON.stringify(nodeInfo.inLinks))
+        outLinks.forEach((i, index) => {
+          i.offsetX = widthPercentageIncrease * i.offsetX
+          i.offsetY = curNodeInfo.outLinks[index].offsetY
+        })
+        inLinks.forEach((i, index) => {
+          i.offsetX = widthPercentageIncrease * i.offsetX
+          i.offsetY = curNodeInfo.inLinks[index].offsetY
+        })
+        this.updateNodeInfo({
+          id: nodeInfo.id,
+          inLinks: inLinks,
+          outLinks: outLinks
+        })
+      },
+      updateDotsOffsetX(index, nodeInfo, movedWidth) {
+        let selectorOriginWidth = this.selectorOriginState.width
+        // let selectorOriginLeft = this.selectorOriginState.left
+        let curNodeInfo = this.nodes[nodeInfo.id]
+        let widthPercentageIncrease = 1
+        if(index == 3 || index == 4 || index == 5) {
+          widthPercentageIncrease = (selectorOriginWidth + movedWidth) / selectorOriginWidth
+        }else if (index == 1 || index == 7 || index == 8) {
+          widthPercentageIncrease = (selectorOriginWidth - movedWidth) / selectorOriginWidth
+        }
+        let dots = JSON.parse(JSON.stringify(nodeInfo.dots))
+        dots.forEach((i, index) => {
+          i.x = widthPercentageIncrease * i.x
+          i.y = curNodeInfo.dots[index].y
+        })
+        this.updateNodeInfo({
+          id: nodeInfo.id,
+          dots
+        })
+      },
+      updateLinkOffsetY(index, nodeInfo, movedHeight) {
+        let selectorOriginHeight = this.selectorOriginState.height
+        // let selectorOriginTop = this.selectorOriginState.top
+        let curNodeInfo = this.nodes[nodeInfo.id]
+        let heightPercentageIncrease = 1
+        if(index == 1 || index == 2 || index == 3) {
+          heightPercentageIncrease = (selectorOriginHeight - movedHeight) / selectorOriginHeight
+        }else if (index == 5 || index == 6 || index == 7) {
+          heightPercentageIncrease = (selectorOriginHeight + movedHeight) / selectorOriginHeight
+        }
+        console.log(heightPercentageIncrease);
+        let outLinks = JSON.parse(JSON.stringify(nodeInfo.outLinks))
+        let inLinks = JSON.parse(JSON.stringify(nodeInfo.inLinks))
+        outLinks.forEach((i, index) => {
+          i.offsetY = heightPercentageIncrease * i.offsetY
+          i.offsetX = curNodeInfo.outLinks[index].offsetX
+        })
+        inLinks.forEach((i, index) => {
+          i.offsetY = heightPercentageIncrease * i.offsetY
+          i.offsetX = curNodeInfo.inLinks[index].offsetX
+        })
+        this.updateNodeInfo({
+          id: nodeInfo.id,
+          inLinks: inLinks,
+          outLinks: outLinks
+        })
+      },
+      updateDotsOffsetY(index, nodeInfo, movedHeight) {
+        let selectorOriginHeight = this.selectorOriginState.height
+        let curNodeInfo = this.nodes[nodeInfo.id]
+        let heightPercentageIncrease = 1
+        if(index == 1 || index == 2 || index == 3) {
+          heightPercentageIncrease = (selectorOriginHeight - movedHeight) / selectorOriginHeight
+        }else if (index == 5 || index == 6 || index == 7) {
+          heightPercentageIncrease = (selectorOriginHeight + movedHeight) / selectorOriginHeight
+        }
+        let dots = JSON.parse(JSON.stringify(nodeInfo.dots))
+        dots.forEach((i, index) => {
+          i.y = heightPercentageIncrease * i.y
+          i.x = curNodeInfo.dots[index].x
+        })
+        this.updateNodeInfo({
+          id: nodeInfo.id,
+          dots
+        })
       },
       getChangIngHeightAndTop(index, nodeInfo, movedHeight) {
         let nodeOriginHeight = nodeInfo.height
@@ -592,10 +729,14 @@ import { ELPADDING } from '../constants/index'
         if(this.isSelecting) {
           this.createSelectingBox(e)
         } else if(this.isNodeMouseDown) {
+          this.isMoveingNode = true
           this.moveNodes(e)
-        } else if(this.isDrawIngLink) {
-          this.drawLink(e)
+        } else {
+          this.isMouseOnBoard = this.isOnBoard(e)
         }
+        // else if(this.isDrawIngLink) {
+        //   this.drawLink(e)
+        // }
         // let cursor = this.getCursor()
         // this.$store.commit('board/updateCursor', cursor)
         
@@ -621,32 +762,32 @@ import { ELPADDING } from '../constants/index'
         //   this.dispatchMouseMove(links, e)
         // }
       },
-      getCursor() {
-        if(this.isShpaeControlorMouseDown) {
-          switch(this.controlorIndex) {
-            case 1:
-              return 'nw-resize';
-            case 2:
-              return 's-resize';
-            case 3:
-              return 'ne-resize';
-            case 4:
-              return 'e-resize';
-            case 5:
-              return 'nw-resize';
-            case 6:
-              return 's-resize';
-            case 7:
-              return 'ne-resize';
-            case 8:
-              return 'e-resize';
-          }
-        } else if (this.isDrawIngLink){
-          return 'crosshair'
-        } else {
-          return 'default'
-        }
-      },
+      // getCursor() {
+      //   if(this.isShpaeControlorMouseDown) {
+      //     switch(this.controlorIndex) {
+      //       case 1:
+      //         return 'nw-resize';
+      //       case 2:
+      //         return 's-resize';
+      //       case 3:
+      //         return 'ne-resize';
+      //       case 4:
+      //         return 'e-resize';
+      //       case 5:
+      //         return 'nw-resize';
+      //       case 6:
+      //         return 's-resize';
+      //       case 7:
+      //         return 'ne-resize';
+      //       case 8:
+      //         return 'e-resize';
+      //     }
+      //   } else if (this.isDrawIngLink){
+      //     return 'crosshair'
+      //   } else {
+      //     return 'default'
+      //   }
+      // },
       // dispatchMouseMove(ids, e) {
       //   for(let id of ids) {
       //     let el = document.getElementById(id).childNodes[0]
@@ -729,10 +870,9 @@ import { ELPADDING } from '../constants/index'
         this.$nextTick(() => this.selectorOriginState = this.getSelectorOriginState(e))
         this.isNodeMouseDown = true
       },
-      onStartDrawLink(e, callback) {
+      onStartDrawLink(e, nodeId, callback) {
         this.mouseDownX = e.clientX
         this.mouseDownY = e.clientY
-        this.isDrawIngLink = true
         let linkType = this.getLinkType()
         let arrowType = this.getArrowType()
         let linkWidth = this.getLinkWidth()
@@ -758,7 +898,9 @@ import { ELPADDING } from '../constants/index'
           linkColor,
           width: 100,
           height: 100,
-          index: 1
+          index: 1,
+          sourceNodeId: nodeId,
+          targetNodeId: ''
         }
         // console.log('board/addLink');
         this.$store.commit('board/addLink', newLinkInfo)
@@ -937,19 +1079,82 @@ import { ELPADDING } from '../constants/index'
 
         }
       },
-      drawLink(e) {
-        let boardRect = this.$refs.drawing_board.getBoundingClientRect()
-        let mouseX = e.clientX - boardRect.left
-        let mouseY = e.clientY - boardRect.top
-        let id = this.isDrawingLinkId
-        this.$store.commit('board/updateLinkInfo', {
-          id,
-          end: {
-            x: mouseX,
-            y: mouseY
-          }
-        })
-      }
+      // drawLink(e) {
+      //   let boardRect = this.$refs.drawing_board.getBoundingClientRect()
+      //   let mouseX = e.clientX - boardRect.left
+      //   let mouseY = e.clientY - boardRect.top
+      //   let id = this.isDrawingLinkId
+      //   let end
+      //   this.$refs[id][0].$el.childNodes[0].style.pointerEvents = 'none'
+      //   let underneathElement = document.elementFromPoint(e.clientX, e.clientY)
+      //   this.$refs[id][0].$el.childNodes[0].style.pointerEvents = 'auto'
+      //   if (underneathElement.classList.contains('node')) {
+      //     end = this.getNearestNodeLinkPoint(e, underneathElement)
+      //     console.log(end);
+          
+      //   } else {
+      //     end = {
+      //       x: mouseX,
+      //       y: mouseY
+      //     }
+      //   }
+      //   console.log(end);
+        
+      //   this.$store.commit('board/updateLinkInfo', {
+      //     id,
+      //     end
+      //   })
+      // },
+      // getNearestNodeLinkPoint(e, underneathElement) {
+      //   let nodeId = underneathElement.id
+      //   let nodeCom = this.$refs[nodeId][0]
+      //   let ctx = underneathElement.getContext('2d')
+      //   let boardRect = this.$refs.drawing_board.getBoundingClientRect()
+      //   let mouseX = e.clientX - boardRect.left
+      //   let mouseY = e.clientY - boardRect.top
+      //   let rect = nodeCom.$el.getBoundingClientRect();
+      //   let offsetX = e.clientX - rect.left;
+      //   let offsetY = e.clientY - rect.top;
+      //   let nodeInfo = this.nodes[nodeId]
+      //   let isOnBorder = ctx.isPointInStroke(offsetX, offsetY)
+      //   if (isOnBorder) {
+      //     return {
+      //       x: mouseX,
+      //       y: mouseY
+      //     }
+      //   } else {
+      //     let closestNodeCoord = this.findClosestNode(nodeInfo.dots, { x: offsetX, y: offsetY })
+      //     console.log(11,closestNodeCoord);
+      //     console.log(22,rect);
+          
+      //     return {
+      //       x: rect.left + closestNodeCoord.x - boardRect.left,
+      //       y: rect.top + closestNodeCoord.y - boardRect.top
+      //     }
+      //   }
+      // },
+      // findClosestNode(nodes, point) {
+      //   let closestNode = null;
+      //   let minDistance = Infinity;
+
+      //   nodes.forEach(node => {
+      //     // 计算每个节点与给定点的距离
+      //     const distance = Math.sqrt(
+      //       Math.pow(node.x - point.x, 2) + Math.pow(node.y - point.y, 2)
+      //     );
+
+      //     // 比较距离，找到最近的节点
+      //     if (distance < minDistance) {
+      //       minDistance = distance;
+      //       closestNode = node;
+      //     }
+      //   });
+
+      //   return {
+      //     x: closestNode.x,
+      //     y: closestNode.y
+      //   };
+      // }
     },
   }
 </script>

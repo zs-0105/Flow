@@ -37,8 +37,21 @@ const node = {
       // 拖拽元素列表元素或画布中节点信息
       setDragNodeInfo(state, data) {
         console.log('dragElInfo',data);
-        
-        state.dragElInfo = { ...state.dragElInfo,  ...data } 
+        let defaultInfo = {
+          name: '',
+          funName: '',
+          cname: '',
+          width: 0,
+          height: 0,
+          top: 0,
+          left: 0,
+          text: "",
+          index: 1,
+          id: "",    
+          inLinks: [],
+          outLinks: [],
+        }
+        state.dragElInfo = Object.assign(defaultInfo, data)//{ ...state.dragElInfo,  ...data } 
       },
     },
     actions: {

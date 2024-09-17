@@ -11,12 +11,13 @@
       ref="nodeContent"
       >
       <div class="hover_dot"
-        v-show="isInContent || isOnBorder"
-        v-for="item in dots"
+        v-show="(isInContent || isOnBorder) && !isSelected"
+        v-for="item in nodeInfo.dots"
         :key="item.id"
         @mousedown="dotMouseDown"
         @mouseenter="isOnHoverDot = true"
         @mouseleave="isOnHoverDot = false"
+        :style="{left: item.x - LINKDOTWIDTH + 'px', top: item.y - LINKDOTWIDTH + 'px'}"
       >
       <!-- top:`${item.y}px`,left:`${item.x}px`, -->
       </div>
@@ -37,7 +38,7 @@
 <script>
 import canvas from '@/utils/canvas.js'
 import { mapState } from 'vuex'
-import { ELPADDING } from '../constants/index'
+import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
   export default {
     components: {},
     props:{
@@ -80,17 +81,17 @@ import { ELPADDING } from '../constants/index'
         isSelected() {
           return this.selectedNodesMap[this.id]
         },
-        canvasCursor() {
-          if(this.isOnBorder && !this.isSelected){
-            return 'crosshair'
-          }else if(this.isOnBorder && this.isSelected) {
-            return 'move'
-          }else if(this.isInContent) {
-            return 'move'
-          }else {
-            return 'default'
-          }
-        },
+        // canvasCursor() {
+        //   if(this.isOnBorder && !this.isSelected){
+        //     return 'crosshair'
+        //   }else if(this.isOnBorder && this.isSelected) {
+        //     return 'move'
+        //   }else if(this.isInContent) {
+        //     return 'move'
+        //   }else {
+        //     return 'default'
+        //   }
+        // },
         showRedDot() {
           if(this.isOnBorder && !this.isSelected && !this.isOnHoverDot) {
             return true
@@ -105,21 +106,22 @@ import { ELPADDING } from '../constants/index'
     },
     data () {
       return {
-        dots: [],
+        // dots: [],
         isNodeMousedown: false,
         isInContent: false,//鼠标是否在画布有内容的区域
         isOnBorder: false, //鼠标是否在边框线上
         redDotX: '0px',
         redDotY: '0px',
         isOnHoverDot: false,
-        ELPADDING: ELPADDING
+        ELPADDING: ELPADDING,
+        LINKDOTWIDTH: LINKDOTWIDTH
       }
     },
     methods: {
         init() {
             let funName = this.nodeInfo.funName
             canvas[funName](this.$refs.nodeCanvas)
-            this.dots = this.nodeInfo.dots
+            // this.dots = this.nodeInfo.dots
             if(!this.nodeInfo.dots) {
               this.resetDots()
             }
@@ -128,36 +130,41 @@ import { ELPADDING } from '../constants/index'
         resetDots() {
           let width = this.width
           let height = this.height
-          let offset = 4
-          this.dots = [
+          // let offset = 4
+          let dots = [
             {
               id: 1,
-              x: width / 2 - offset,
-              y: - offset
+              x: width / 2,
+              y: 0 + LINKDOTWIDTH / 2
             },
             {
               id: 2,
-              x: width - offset,
-              y: height / 2 - offset
+              x: width - LINKDOTWIDTH / 2,
+              y: height / 2
             },
             {
               id: 3,
-              x: width / 2 - offset,
-              y: height - offset
+              x: width / 2,
+              y: height - LINKDOTWIDTH / 2
             },
             {
               id: 4,
-              x: - offset,
-              y: height / 2 - offset
+              x: 0 + LINKDOTWIDTH / 2,
+              y: height / 2
             }
           ]
-          if(this.nodeInfo.dots) {
-            this.nodeInfo.dots = this.dots
-          }
+          this.$store.commit('board/updateNodeInfo', {
+            id: this.nodeInfo.id,
+            dots
+          })
+          // if(this.nodeInfo.dots) {
+          //   this.nodeInfo.dots = this.dots
+          // }
+
         },
         nodeMousedown(event) {
           if(this.isOnBorder && !this.isSelected) {
-            this.$bus.$emit('startDrawLink', event, (newLinkInfo) => {
+            this.$bus.$emit('startDrawLink', event, this.id, (newLinkInfo) => {
               let outLinks = [...this.nodeInfo.outLinks]
               outLinks.push({
                 id: newLinkInfo.id,
@@ -167,6 +174,9 @@ import { ELPADDING } from '../constants/index'
               this.$store.commit('board/updateNodeInfo', {
                 id: this.nodeInfo.id,
                 outLinks: outLinks
+              })
+              this.$store.commit('board/updateMouseInfo', {
+                isDrawingLink: true,
               })
             })
             return;
@@ -192,22 +202,12 @@ import { ELPADDING } from '../constants/index'
           this.isInContent = ctx.isPointInPath(offsetX, offsetY);
           this.isOnBorder = ctx.isPointInStroke(offsetX, offsetY);
           if(this.isOnBorder && !this.isSelected) {
-            this.redDotX = event.clientX + 'px';
-            this.redDotY = event.clientY + 'px';
+            this.redDotX = event.clientX - 3 + 'px';
+            this.redDotY = event.clientY - 3 + 'px';
           }
           if (!this.isSelected) {
-            // dispatchEvent(event, 'mousemove')
+            this.dispatchEvent(event, 'mousemove')
           }
-          // let cursor = 'default'
-          // if(this.isOnBorder && !this.isSelected){
-          //   cursor = 'crosshair'
-          // }else if(this.isOnBorder && this.isSelected) {
-          //   cursor = 'move'
-          // }else if(this.isInContent) {
-          //   cursor = 'move'
-          // }
-          // console.log('nodeMouseMove', cursor, this.isInContent);
-          // this.$store.commit('board/updateCursor', cursor)
           this.$store.commit('board/updateMouseInfo', {
             isOnNodeContent: this.isInContent,
             isOnNodeBorder: this.isOnBorder,
@@ -294,22 +294,22 @@ import { ELPADDING } from '../constants/index'
         pointer-events: none;
       }
     }
-    .hover_dot:nth-child(1) {
-      top: -4px;
-      left: calc(50% - 4px);
-    }
-    .hover_dot:nth-child(2) {
-      top: calc(50% - 4px);
-      left: calc(100% - 4px);
-    }
-    .hover_dot:nth-child(3) {
-      top: calc(100% - 4px);
-      left: calc(50% - 4px);
-    }
-    .hover_dot:nth-child(4) {
-      top: calc(50% - 4px);
-      left: -4px;
-    }
+    // .hover_dot:nth-child(1) {
+    //   top: -4px;
+    //   left: calc(50% - 4px);
+    // }
+    // .hover_dot:nth-child(2) {
+    //   top: calc(50% - 4px);
+    //   left: calc(100% - 4px);
+    // }
+    // .hover_dot:nth-child(3) {
+    //   top: calc(100% - 4px);
+    //   left: calc(50% - 4px);
+    // }
+    // .hover_dot:nth-child(4) {
+    //   top: calc(50% - 4px);
+    //   left: -4px;
+    // }
     .hover_dot {
       position: absolute;
       width: 8px;

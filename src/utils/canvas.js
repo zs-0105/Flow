@@ -212,9 +212,9 @@ export const drawTriangle = (selector, info) => {
   const x1 = width / 2; // 第一个顶点的x坐标
   const y1 = borderWidth; // 第一个顶点的y坐标
   const x2 = 0.5; // 第二个顶点的x坐标
-  const y2 = height; // 第二个顶点的y坐标
+  const y2 = height + 1; // 第二个顶点的y坐标
   const x3 = width; // 第三个顶点的x坐标
-  const y3 = height; // 第三个顶点的y坐标
+  const y3 = height + 1; // 第三个顶点的y坐标
 
   ctx.lineWidth = borderWidth;
   ctx.strokeStyle = 'black';
