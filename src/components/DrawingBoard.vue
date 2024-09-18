@@ -5,8 +5,8 @@
             <div class="drawing_board_content">
                 <canvas ref="drawing_board" class="drawing_board" :width="boardWidth" :height="boardHight"></canvas>
                 <!-- :is-selected="selectedNodesMap" -->
-                <node v-for="(value, key) in nodes" :ref="value.id" :key="key" :node-info="value" :is-editing="isEditing" ></node>
-                <flow-link v-for="(value, key) in links" :ref="value.id" :key="key" :link-info="value">
+                <node v-for="(value, key) in nodes" :ref="value.id" :key="key" :node-info="value" :is-editing="isEditing" :selectedNodesMap="selectedNodesMap" @setDragNodeInfo="setDragNodeInfo" @updateNodeInfo="updateNodeInfo" @updateMouseInfo="updateMouseInfo"></node>
+                <flow-link v-for="(value, key) in links" :ref="value.id" :key="key" :link-info="value" @updateNodeInfo="updateNodeInfo" @updateLinkInfo="updateLinkInfo" @updateMouseInfo="updateMouseInfo">
                 </flow-link>
                 <textarea
                   ref="editInput"
@@ -46,7 +46,6 @@
 import canvas from '@/utils/canvas.js'
 import node from '@/components/Node.vue'
 import { generateUUID } from '@/utils/utils.js'
-import { mapState } from 'vuex';
 import link from '@/components/Link.vue'
 import { ELPADDING } from '../constants/index'
   export default {
@@ -55,7 +54,6 @@ import { ELPADDING } from '../constants/index'
       flowLink: link
     },
     computed: {
-      ...mapState('board', ['boardBkColor','boardWidth', 'boardHight', 'nodes', 'selectedNodesId', 'links', 'mouseInfo']),
       selectorTop() {
         return this.selectBoxInfo.top + 'px'
       },
@@ -175,7 +173,24 @@ import { ELPADDING } from '../constants/index'
         // isDrawIngLink: false,
         isDrawingLinkId: '',
         isMoveingNode: false,
-        isMouseOnBoard: false
+        isMouseOnBoard: false,
+        // move
+        nodes: {},
+        links: {},
+        boardBkColor: '#fff',
+        boardWidth: 1500,
+        boardHight: 840,
+        // isNodeMouseDown: false,
+        // cursor: 'default',
+        mouseInfo: { //记录鼠标在元素上的信息
+          isOnNodeContent: false,
+          isOnNodeBorder: false,
+          isNodeSelected: false, //node/link是否被选择
+          isNearLinkStart: false,
+          isNearLinkEnd: false,
+          isDrawingLink: false,
+          isNearLink: false
+        }
       }
     },
     mounted(){
@@ -202,13 +217,12 @@ import { ELPADDING } from '../constants/index'
             this.isShpaeControlorMouseDown = false
           }
           if(this.isDrawingLink) {
-            this.$store.commit('board/updateMouseInfo', {
-              isDrawingLink: false,
+            this.$emit('updateMouseInfo', {
+              isDrawingLink: false
             })
           }
           if(this.isSelecting) {
             this.selectedNodesMap = {}
-            this.$store.commit('board/resetSelectedNodesMap', this.selectedNodesMap)
             this.getSelectedNodes()
             this.isSelecting = false
             this.selectingBoxInfo.selectingBoxHeight = 0
@@ -263,8 +277,7 @@ import { ELPADDING } from '../constants/index'
           id: generateUUID()
         }
         console.log('board/addNode', data);
-        
-        this.$store.commit('board/addNode', data);
+        this.addNode(data)
       },
       nodeOnedting(id) {
         this.isEditing = true
@@ -280,15 +293,6 @@ import { ELPADDING } from '../constants/index'
           id: this.editingNodeId,
           text
         })
-      },
-      updateNodeInfo(data) {
-        if(Array.isArray(data)) {
-          for(let data of data) {
-            this.$store.commit('board/updateNodeInfo', data)
-          }
-        }else {
-          this.$store.commit('board/updateNodeInfo', data)
-        }
       },
       selectNodes(nodesInfo) {
         this.selectBoxInfo.showSelector = true
@@ -329,8 +333,6 @@ import { ELPADDING } from '../constants/index'
           }
           this.selectedNodesMap[id] = true
         }
-        this.$store.commit('board/resetSelectedNodesMap')
-        this.$store.commit('board/updateSelectedNodesMap', this.selectedNodesMap)
         return {
           width: maxLeft - minLeft,
           height: maxTop - minTop,
@@ -734,85 +736,7 @@ import { ELPADDING } from '../constants/index'
         } else {
           this.isMouseOnBoard = this.isOnBoard(e)
         }
-        // else if(this.isDrawIngLink) {
-        //   this.drawLink(e)
-        // }
-        // let cursor = this.getCursor()
-        // this.$store.commit('board/updateCursor', cursor)
-        
-        // e.stopPropagation()
-        // let rect = this.$refs.drawing_board.getBoundingClientRect()
-        // let clientX = e.clientX
-        // let clientY = e.clientY
-        // let x = clientX - rect.left
-        // let y = clientY - rect.top
-        // let underMouseNodeInfo = this.getNodeUnderTheMouse(x, y)
-        // if(underMouseNodeInfo) this.$refs[underMouseNodeInfo.id][0].nodeMouseMove(e)
-        // let isLink = e.target.classList.contains('canvas_link')
-        // if(this.isSelecting) {
-        //   this.createSelectingBox(e)
-        // } else if(this.isNodeMouseDown) {
-        //   this.moveNodes(e)
-        // }else if(isLink) {
-        //   let currentLinkId = e.target.parentElement.id
-        //   let rect = this.$refs.drawing_board.getBoundingClientRect()
-        //   let offsetX = e.clientX - rect.left
-        //   let offsetY = e.clientY - rect.top
-        //   let links = this.getLinksMouseOn(offsetX, offsetY, currentLinkId)
-        //   this.dispatchMouseMove(links, e)
-        // }
       },
-      // getCursor() {
-      //   if(this.isShpaeControlorMouseDown) {
-      //     switch(this.controlorIndex) {
-      //       case 1:
-      //         return 'nw-resize';
-      //       case 2:
-      //         return 's-resize';
-      //       case 3:
-      //         return 'ne-resize';
-      //       case 4:
-      //         return 'e-resize';
-      //       case 5:
-      //         return 'nw-resize';
-      //       case 6:
-      //         return 's-resize';
-      //       case 7:
-      //         return 'ne-resize';
-      //       case 8:
-      //         return 'e-resize';
-      //     }
-      //   } else if (this.isDrawIngLink){
-      //     return 'crosshair'
-      //   } else {
-      //     return 'default'
-      //   }
-      // },
-      // dispatchMouseMove(ids, e) {
-      //   for(let id of ids) {
-      //     let el = document.getElementById(id).childNodes[0]
-      //     // console.log(el);
-      //     let event = {
-      //       bubbles: true,
-      //       cancelable: true,
-      //       view: window,
-      //       detail: 0,
-      //       screenX: e.screenX,
-      //       screenY: e.screenY,
-      //       clientX: e.clientX,
-      //       clientY: e.clientY,
-      //       ctrlKey: e.ctrlKey,
-      //       altKey: e.altKey,
-      //       shiftKey: e.shiftKey,
-      //       metaKey: e.metaKey,
-      //       button: e.button,
-      //       relatedTarget: e.relatedTarget
-      //     }
-      //     // console.log('mousemove' + id);
-      //     this.$bus.$emit('mousemove' + id, event)
-      //     // el.dispatchEvent(event)
-      //   }
-      // },
       getLinksMouseOn(offsetX, offsetY, currentLinkId) {
         let links = []
         for(let id in this.links) {
@@ -902,18 +826,8 @@ import { ELPADDING } from '../constants/index'
           sourceNodeId: nodeId,
           targetNodeId: ''
         }
-        // console.log('board/addLink');
-        this.$store.commit('board/addLink', newLinkInfo)
+        this.addLink(newLinkInfo)
         callback(newLinkInfo)
-      },
-      updateLinkInfo(infos) {
-        if (Array.isArray(infos)) {
-          for (let info of infos) {
-            this.$store.commit('board/updateLinkInfo', info)
-          }
-        } else {
-          this.$store.commit('board/updateLinkInfo', infos)
-        }
       },
       getLinkType() {
         return 'straightlink'
@@ -1055,106 +969,95 @@ import { ELPADDING } from '../constants/index'
         return tmpLinkInfo
         // console.log(this.$refs[tmpNodeInfo.id][0].$el);
       },
-      getElUnderTheMouse(x, y) {
-        let result;
-        let underMouseLinkInfo = this.getLinkUnderTheMouse(x, y);
-        let underMouseNodeInfo = this.getNodeUnderTheMouse(x, y);
-        if(underMouseLinkInfo && underMouseNodeInfo) {
-          let index1 = underMouseNodeInfo.index
-          let index2 = underMouseLinkInfo.index
-          if(index1 > index2) {
-            result = underMouseNodeInfo
-          }else if(index1 < index2) {
-            result = underMouseLinkInfo
-          }else {
-            let element1 = this.$refs[underMouseNodeInfo.id][0].$el
-            let element2 = this.$refs[underMouseLinkInfo.id][0].$el
-            if(element1.compareDocumentPosition(element2) & Node.DOCUMENT_POSITION_PRECEDING) {
-              result = element1
-            }else {
-              result = element2
-            }
-          }
-        }else if(underMouseLinkInfo) {
+      // getElUnderTheMouse(x, y) {
+      //   let result;
+      //   let underMouseLinkInfo = this.getLinkUnderTheMouse(x, y);
+      //   let underMouseNodeInfo = this.getNodeUnderTheMouse(x, y);
+      //   if(underMouseLinkInfo && underMouseNodeInfo) {
+      //     let index1 = underMouseNodeInfo.index
+      //     let index2 = underMouseLinkInfo.index
+      //     if(index1 > index2) {
+      //       result = underMouseNodeInfo
+      //     }else if(index1 < index2) {
+      //       result = underMouseLinkInfo
+      //     }else {
+      //       let element1 = this.$refs[underMouseNodeInfo.id][0].$el
+      //       let element2 = this.$refs[underMouseLinkInfo.id][0].$el
+      //       if(element1.compareDocumentPosition(element2) & Node.DOCUMENT_POSITION_PRECEDING) {
+      //         result = element1
+      //       }else {
+      //         result = element2
+      //       }
+      //     }
+      //   }else if(underMouseLinkInfo) {
 
+      //   }
+      // },
+      setDragNodeInfo(data) {
+        this.$emit('setDragNodeInfo', data)
+      },
+      addNode(data) {
+        // this.nodes[data.id] = data
+        this.$set(this.nodes, data.id, data)
+      },
+      updateNodeInfo(datas) {
+        if(Array.isArray(datas)) {
+          for(let data of datas) {
+            let { id } = data
+            // state.nodes[id][attr] = value
+            let nodeInfo = this.nodes[id]
+            let funName = nodeInfo.funName
+            let selector = '#' + id
+            // nodeInfo[attr] = value
+            Object.assign(nodeInfo, data)
+            // if(refresh) {
+            requestAnimationFrame(() => {//requestAnimationFrame防止图像闪烁
+              canvas[funName](selector, nodeInfo)
+            })
+          }
+        }else {
+          debugger
+          let { id } = datas
+          // state.nodes[id][attr] = value
+          let nodeInfo = this.nodes[id]
+          let funName = nodeInfo.funName
+          let selector = '#' + id
+          // nodeInfo[attr] = value
+          Object.assign(nodeInfo, datas)
+          // if(refresh) {
+          requestAnimationFrame(() => {//requestAnimationFrame防止图像闪烁
+            canvas[funName](selector, nodeInfo)
+          })
         }
       },
-      // drawLink(e) {
-      //   let boardRect = this.$refs.drawing_board.getBoundingClientRect()
-      //   let mouseX = e.clientX - boardRect.left
-      //   let mouseY = e.clientY - boardRect.top
-      //   let id = this.isDrawingLinkId
-      //   let end
-      //   this.$refs[id][0].$el.childNodes[0].style.pointerEvents = 'none'
-      //   let underneathElement = document.elementFromPoint(e.clientX, e.clientY)
-      //   this.$refs[id][0].$el.childNodes[0].style.pointerEvents = 'auto'
-      //   if (underneathElement.classList.contains('node')) {
-      //     end = this.getNearestNodeLinkPoint(e, underneathElement)
-      //     console.log(end);
-          
-      //   } else {
-      //     end = {
-      //       x: mouseX,
-      //       y: mouseY
-      //     }
-      //   }
-      //   console.log(end);
-        
-      //   this.$store.commit('board/updateLinkInfo', {
-      //     id,
-      //     end
-      //   })
-      // },
-      // getNearestNodeLinkPoint(e, underneathElement) {
-      //   let nodeId = underneathElement.id
-      //   let nodeCom = this.$refs[nodeId][0]
-      //   let ctx = underneathElement.getContext('2d')
-      //   let boardRect = this.$refs.drawing_board.getBoundingClientRect()
-      //   let mouseX = e.clientX - boardRect.left
-      //   let mouseY = e.clientY - boardRect.top
-      //   let rect = nodeCom.$el.getBoundingClientRect();
-      //   let offsetX = e.clientX - rect.left;
-      //   let offsetY = e.clientY - rect.top;
-      //   let nodeInfo = this.nodes[nodeId]
-      //   let isOnBorder = ctx.isPointInStroke(offsetX, offsetY)
-      //   if (isOnBorder) {
-      //     return {
-      //       x: mouseX,
-      //       y: mouseY
-      //     }
-      //   } else {
-      //     let closestNodeCoord = this.findClosestNode(nodeInfo.dots, { x: offsetX, y: offsetY })
-      //     console.log(11,closestNodeCoord);
-      //     console.log(22,rect);
-          
-      //     return {
-      //       x: rect.left + closestNodeCoord.x - boardRect.left,
-      //       y: rect.top + closestNodeCoord.y - boardRect.top
-      //     }
-      //   }
-      // },
-      // findClosestNode(nodes, point) {
-      //   let closestNode = null;
-      //   let minDistance = Infinity;
-
-      //   nodes.forEach(node => {
-      //     // 计算每个节点与给定点的距离
-      //     const distance = Math.sqrt(
-      //       Math.pow(node.x - point.x, 2) + Math.pow(node.y - point.y, 2)
-      //     );
-
-      //     // 比较距离，找到最近的节点
-      //     if (distance < minDistance) {
-      //       minDistance = distance;
-      //       closestNode = node;
-      //     }
-      //   });
-
-      //   return {
-      //     x: closestNode.x,
-      //     y: closestNode.y
-      //   };
-      // }
+      updateSelectedNodesMap(data) {
+        this.selectedNodesMap = data
+      },
+      resetSelectedNodesMap() {
+        this.selectedNodesMap = {}
+      },
+      addLink(data) {
+        // this.links[data.id] = data
+        this.$set(this.links, data.id, data)
+      },
+      updateLinkInfo(infos) {
+        if (Array.isArray(infos)) {
+          for (let info of infos) {
+            let { id } = info
+            let linkInfo = this.links[id]
+            Object.assign(linkInfo, info)
+          }
+        } else {
+          let { id } = infos
+          let linkInfo = this.links[id]
+          Object.assign(linkInfo, infos)
+        }
+      },
+      updateMouseInfo(data) {
+        for(let key in data) {
+          this.mouseInfo[key] = data[key]
+        }
+      }
     },
   }
 </script>

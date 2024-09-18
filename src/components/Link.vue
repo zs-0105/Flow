@@ -34,7 +34,6 @@
 </template>
 
 <script>
-import { mapState } from 'vuex';
   const ELPADDING = 10
   const EDITORDEFAULTWIDTH = 100
   const EDITORDEFAULTHEIFHT = 18
@@ -49,7 +48,6 @@ import { mapState } from 'vuex';
         }
     },
     computed: {
-      ...mapState('board', ['mouseInfo']),
       id() {
         return this.linkInfo.id
       },
@@ -120,8 +118,8 @@ import { mapState } from 'vuex';
       },
       isDrawIng: {
         handler(newval) {
-          this.$store.commit('board/updateMouseInfo', {
-            isDrawingLink: newval,
+          this.$emit('updateMouseInfo', {
+            isDrawingLink: newval
           })
         }
       }
@@ -149,7 +147,7 @@ import { mapState } from 'vuex';
                   y: mouseY
                 }
               }
-              this.$store.commit('board/updateLinkInfo', {
+              this.$emit('updateLinkInfo', {
                 id,
                 start
               })
@@ -163,12 +161,11 @@ import { mapState } from 'vuex';
                   y: mouseY
                 }
               }
-              this.$store.commit('board/updateLinkInfo', {
+              this.$emit('updateLinkInfo', {
                 id,
                 end
               })
             }
-            // this.drawLink(this.linkInfo)
           }
         })
         document.addEventListener('mouseup', (e) => {
@@ -203,16 +200,16 @@ import { mapState } from 'vuex';
                   let oldInlinks = JSON.parse(JSON.stringify(this.$parent.nodes[this.linkInfo.targetNodeId].inLinks))
                   let index = oldInlinks.findIndex(i => i.id == this.id)
                   oldInlinks.splice(index, 1)
-                  this.$store.commit('board/updateNodeInfo', {
+                  this.$emit('updateNodeInfo', {
                     id: this.linkInfo.targetNodeId,
                     inLinks: oldInlinks
                   })
                 }
-                this.$store.commit('board/updateNodeInfo', {
+                this.$emit('updateNodeInfo', {
                   id: nodeId,
                   inLinks
                 })
-                this.$store.commit('board/updateLinkInfo', {
+                this.$emit('updateLinkInfo', {
                   id: this.id,
                   targetNodeId: nodeId
                 })
@@ -238,16 +235,16 @@ import { mapState } from 'vuex';
                   let oldOutlinks = JSON.parse(JSON.stringify(this.$parent.nodes[this.linkInfo.sourceNodeId].outLinks))
                   let index = oldOutlinks.findIndex(i => i.id == this.id)
                   oldOutlinks.splice(index, 1)
-                  this.$store.commit('board/updateNodeInfo', {
+                  this.$emit('updateNodeInfo', {
                     id: this.linkInfo.sourceNodeId,
                     outLinks: oldOutlinks
                   })
                 }
-                this.$store.commit('board/updateNodeInfo', {
+                this.$emit('updateNodeInfo', {
                   id: nodeId,
                   outLinks
                 })
-                this.$store.commit('board/updateLinkInfo', {
+                this.$emit('updateLinkInfo', {
                   id: this.id,
                   sourceNodeId: nodeId
                 })
@@ -263,12 +260,12 @@ import { mapState } from 'vuex';
                   if (existIndex >= 0) {
                     inLinks.splice(existIndex, 1)
                   }
-                  this.$store.commit('board/updateNodeInfo', {
+                  this.$emit('updateNodeInfo', {
                     id: targetNodeId,
                     inLinks
                   })
                 } 
-                this.$store.commit('board/updateLinkInfo', {
+                this.$emit('updateLinkInfo', {
                   id: this.id,
                   targetNodeId: ''
                 })
@@ -281,14 +278,14 @@ import { mapState } from 'vuex';
                   if (existIndex >= 0) {
                     outLinks.splice(existIndex, 1)
                   }
-                  this.$store.commit('board/updateNodeInfo', {
+                  this.$emit('updateNodeInfo', {
                     id: sourceNodeId,
                     outLinks
                   })
                 }
-                this.$store.commit('board/updateLinkInfo', {
+                this.$emit('updateLinkInfo', {
                   id: this.id,
-                  sourceNodeId: ''
+                  targetNodeId: ''
                 })
               }
             }
@@ -481,7 +478,7 @@ import { mapState } from 'vuex';
         // } else if (this.isNearLink && !this.isDrawIng) {
         //   cursor = 'pointer'
         // }
-        this.$store.commit('board/updateMouseInfo', {
+        this.$emit('updateMouseInfo', {
           isNearLinkStart: this.isMouseNearStart,
           isNearLinkEnd: this.isMouseNearEnd,
           isDrawingLink: this.isDrawIng,

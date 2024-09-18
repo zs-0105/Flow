@@ -65,11 +65,19 @@
 
 <script>
 import canvas from '@/utils/canvas.js'
-import { mapState } from 'vuex';
   export default {
     components: {},
     computed: {
-        ...mapState('elements', ['isElMouseDown','dragElInfo'])
+    },
+    props: {
+        isElMouseDown: {
+            type: Boolean,
+            default: false
+        },
+        dragElInfo: {
+            type: Object,
+            default: () => {}
+        }
     },
     mounted() {
     },
@@ -197,8 +205,8 @@ import { mapState } from 'vuex';
             this.showOpt[ref] = false
         },
         elementMouseDown (event, info) {
-            this.$store.commit('node/setIsElMouseDown', true);
-            this.$store.commit('node/setDragNodeInfo', info);
+            this.$emit('setIsElMouseDown', true)
+            this.$emit('setDragNodeInfo', info)
         },
     },
   }

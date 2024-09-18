@@ -37,7 +37,6 @@
 
 <script>
 import canvas from '@/utils/canvas.js'
-import { mapState } from 'vuex'
 import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
   export default {
     components: {},
@@ -53,10 +52,13 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
         isEditing: {
           type: Boolean,
           default: false
+        },
+        selectedNodesMap: {
+          type: Object,
+          default: () => {}
         }
     },
     computed: {
-        ...mapState('board', ['selectedNodesMap']),
         id() {
           return this.nodeInfo.id
         },
@@ -153,13 +155,10 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
               y: height / 2
             }
           ]
-          this.$store.commit('board/updateNodeInfo', {
+          this.$emit('updateNodeInfo', {
             id: this.nodeInfo.id,
             dots
           })
-          // if(this.nodeInfo.dots) {
-          //   this.nodeInfo.dots = this.dots
-          // }
 
         },
         nodeMousedown(event) {
@@ -171,11 +170,11 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
                 offsetX: event.offsetX,
                 offsetY: event.offsetY
               })
-              this.$store.commit('board/updateNodeInfo', {
+              this.$emit('updateNodeInfo', {
                 id: this.nodeInfo.id,
                 outLinks: outLinks
               })
-              this.$store.commit('board/updateMouseInfo', {
+              this.$emit('updateMouseInfo', {
                 isDrawingLink: true,
               })
             })
@@ -187,7 +186,7 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
             }
             this.$bus.$emit('nodeMouseDown', event)
           }
-          this.$store.commit('node/setDragNodeInfo', this.nodeInfo);
+          this.$emit('setDragNodeInfo', this.nodeInfo)
         },
         nodeMouseleave() {
           this.isOnBorder = false;
@@ -208,11 +207,11 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
           if (!this.isSelected) {
             this.dispatchEvent(event, 'mousemove')
           }
-          this.$store.commit('board/updateMouseInfo', {
+          this.$emit('updateMouseInfo', {
             isOnNodeContent: this.isInContent,
             isOnNodeBorder: this.isOnBorder,
             isNodeSelected: this.isSelected,
-          })
+          }) 
         },
         selectNode() {
           let { width, height, top, left, id } = this
