@@ -1,3 +1,10 @@
+/*
+ * @Description: 
+ * @Author: zs
+ * @Date: 2023-06-13 18:02:09
+ * @LastEditTime: 2024-12-06 16:41:25
+ * @LastEditors: zs
+ */
 // 拖拽元素列表状态管理
 const node = {
     namespaced: true,
@@ -36,7 +43,6 @@ const node = {
       },
       // 拖拽元素列表元素或画布中节点信息
       setDragNodeInfo(state, data) {
-        console.log('dragElInfo',data);
         let defaultInfo = {
           name: '',
           funName: '',

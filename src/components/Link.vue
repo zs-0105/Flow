@@ -9,7 +9,10 @@
       }"
     >
     <!-- @mousemove="onLinkMousemove" -->
-    <canvas class="canvas_link" ref="link" @click="onLinkClick" @mousemove="onLinkMousemove" @dblclick="onLinkDblclick" @mousedown="onLinkMouseDown"></canvas>
+    <canvas class="canvas_link" ref="link" :style="{
+        width: width + 'px',
+        height: height + 'px',
+      }" @click="onLinkClick" @mousemove="onLinkMousemove" @dblclick="onLinkDblclick" @mousedown="onLinkMouseDown"></canvas>
     <textarea class="link_text_input" ref="textInput" v-show="showEditor"
       @blur="textInputBlur"
       @input="inputText"
@@ -34,6 +37,7 @@
 </template>
 
 <script>
+  const ratio = window.devicePixelRatio || 1;
   const ELPADDING = 10
   const EDITORDEFAULTWIDTH = 100
   const EDITORDEFAULTHEIFHT = 18
@@ -45,6 +49,10 @@
         linkInfo: {
           type: Object,
           required: true,
+        },
+        isDrawingLink: {
+          type: Boolean,
+          default: false
         }
     },
     computed: {
@@ -171,7 +179,6 @@
         document.addEventListener('mouseup', (e) => {
           if (this.isDrawIng) {
             let underneathElement = document.elementFromPoint(e.clientX, e.clientY)
-            console.log(underneathElement);
             if (underneathElement && underneathElement.classList.contains('node')) {
               let nodeId = underneathElement.id
               let nodeInfo = this.$parent.nodes[nodeId]
@@ -191,11 +198,8 @@
                     offsetY: this.linkInfo.end.y - nodeInfo.top
                   })
                 }
-                console.warn('board/updateNodeInfo');
                 // 删除旧连接node中inlink
                 if (this.linkInfo.targetNodeId && nodeId !== this.linkInfo.targetNodeId) {
-                  debugger
-                  console.log(this.linkInfo , this.$parent.links[this.id]);
                   
                   let oldInlinks = JSON.parse(JSON.stringify(this.$parent.nodes[this.linkInfo.targetNodeId].inLinks))
                   let index = oldInlinks.findIndex(i => i.id == this.id)
@@ -229,7 +233,6 @@
                     offsetY: this.linkInfo.start.y - nodeInfo.top
                   })
                 }
-                console.warn('board/updateNodeInfo');
                 // 删除旧连接node中outlink
                 if (this.linkInfo.sourceNodeId && nodeId !== this.linkInfo.sourceNodeId) {
                   let oldOutlinks = JSON.parse(JSON.stringify(this.$parent.nodes[this.linkInfo.sourceNodeId].outLinks))
@@ -305,8 +308,10 @@
         let canvas = this.$refs.link
         let { start, end, points, startArrowType, endArrowType, linkType, linkWidth, linkColor } = linkInfo
         if(start.x == end.x && start.y == end.y) return;
-        canvas.width = this.width;
-        canvas.height = this.height;
+        canvas.width = this.width * ratio;
+        canvas.height = this.height * ratio;
+        canvas.style.width = this.width + 'px';
+        canvas.style.height = this.height + 'px';
         switch(linkType) {
           case 'polylink' :
 
@@ -337,12 +342,12 @@
         let top = this.top, left = this.left
         const size = 10
         let from = {
-          x: start.x - left,
-          y: start.y - top
+          x: (start.x - left) * ratio,
+          y: (start.y - top) * ratio
         }
         let to = {
-          x: end.x - left,
-          y: end.y - top
+          x: (end.x - left) * ratio,
+          y: (end.y - top) * ratio
         }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.lineWidth = linkWidth;
@@ -351,14 +356,15 @@
         // ctx.lineTo(to.x, to.y);
         // ctx.stroke();
         // this.drawArrow(ctx, from.x, from.y, to.x, to.y, size)
-        // this.drawSolidArrow(ctx, from.x, from.y, to.x, to.y, size)
-        this.drawDashedArrow(ctx, from.x, from.y, to.x, to.y, size)
+        this.drawSolidArrow(ctx, from.x, from.y, to.x, to.y, size)
+        // this.drawDashedArrow(ctx, from.x, from.y, to.x, to.y, size)
         
       },
       drawArrow(ctx, x1, y1, x2, y2, size) {
         // 计算箭头的角度
         const angle = Math.atan2(y2 - y1, x2 - x1);
-        
+        x2 -= 2 * Math.cos(angle)
+        y2 -= 2 * Math.sin(angle)
         // 开始绘制主线
         ctx.beginPath();
         ctx.moveTo(x1, y1);
@@ -391,6 +397,8 @@
       },
       drawDashedArrow(ctx, x1, y1, x2, y2, size) {
         const angle = Math.atan2(y2 - y1, x2 - x1);
+        x2 -= 2 * Math.cos(angle)
+        y2 -= 2 * Math.sin(angle)
         ctx.beginPath();
         ctx.moveTo(x1, y1)
         ctx.lineTo(
@@ -417,6 +425,8 @@
       },
       drawSolidArrow(ctx, x1, y1, x2, y2, size){
         const angle = Math.atan2(y2 - y1, x2 - x1);
+        x2 -= 2 * Math.cos(angle)
+        y2 -= 2 * Math.sin(angle)
         ctx.beginPath();
         ctx.moveTo(x1, y1)
         ctx.lineTo(
@@ -430,10 +440,10 @@
         ctx.beginPath();
         ctx.moveTo(x2, y2);
         ctx.lineTo(
-          x2 - size * Math.cos(angle - Math.PI / 8), 
+          x2 - size * Math.cos(angle - Math.PI / 8),
           y2 - size * Math.sin(angle - Math.PI / 8));
         ctx.lineTo(
-          x2 - size * Math.cos(angle + Math.PI / 8), 
+          x2 - size * Math.cos(angle + Math.PI / 8),
           y2 - size * Math.sin(angle + Math.PI / 8));
         ctx.closePath();
         ctx.stroke();
@@ -470,6 +480,12 @@
           this.isMouseNearStart = isNearStart
           this.isMouseNearEnd = isNearEnd
         }
+        this.$emit('updateMouseInfo', {
+          isNearLinkStart: this.isMouseNearStart,
+          isNearLinkEnd: this.isMouseNearEnd,
+          isDrawingLink: this.isDrawIng,
+          isNearLink: this.isNearLink
+        })
         this.dispatchEvent(event, 'mousemove')
 
         // let cursor = ''
@@ -478,12 +494,6 @@
         // } else if (this.isNearLink && !this.isDrawIng) {
         //   cursor = 'pointer'
         // }
-        this.$emit('updateMouseInfo', {
-          isNearLinkStart: this.isMouseNearStart,
-          isNearLinkEnd: this.isMouseNearEnd,
-          isDrawingLink: this.isDrawIng,
-          isNearLink: this.isNearLink
-        })
       },
       getMouseIsNearPointer(mouseX, mouseY, pointX, pointY, threshold) {
           const distance = Math.sqrt((mouseX - pointX) ** 2 + (mouseY - pointY) ** 2);
@@ -523,8 +533,8 @@
         let rect = this.$refs.link.getBoundingClientRect();
         let offsetX = event.clientX - rect.left;
         let offsetY = event.clientY - rect.top;
-        let isInContent = ctx.isPointInPath(offsetX, offsetY)
-        // let isPointInStroke = ctx.isPointInPath(offsetX, offsetY)
+        let isInContent = ctx.isPointInPath(offsetX * ratio, offsetY * ratio)
+        // let isPointInStroke = ctx.isPointInPath(offsetX * ratio, offsetY * ratio)
         if (!isInContent) {
           this.$refs.link.style.pointerEvents = 'none';
           const underneathElement = document.elementFromPoint(event.clientX, event.clientY);
@@ -715,26 +725,40 @@
         let rect = nodeCom.$el.getBoundingClientRect();
         let offsetX = e.clientX - rect.left;
         let offsetY = e.clientY - rect.top;
-        let isOnBorder = ctx.isPointInStroke(offsetX - ELPADDING, offsetY - ELPADDING)
+        let isOnBorder = ctx.isPointInStroke((offsetX - ELPADDING) * ratio, (offsetY - ELPADDING) * ratio)
         let nodeInfo = this.$parent.nodes[nodeId]
+        let dots = JSON.parse(JSON.stringify(nodeInfo.dots))
+        dots.forEach(i => { i.active = false })
+        nodeCom.particularPoints = []
         if (isOnBorder) {
+          this.$emit('updateNodeInfo', {
+            id: nodeId,
+            dots
+          })
+          nodeCom.particularPoints = [{x: offsetX - ELPADDING, y: offsetY - ELPADDING, id: 5}]
           return {
             x: mouseX,
             y: mouseY
           }
         } else {
-          let closestNodeCoord = this.findClosestNode(nodeInfo.dots, { x: offsetX, y: offsetY })
+          let closestNodeCoord = this.findClosestNode(nodeInfo.dots, { x: offsetX - ELPADDING, y: offsetY - ELPADDING })
+          
+          dots[closestNodeCoord.index].active = true
+          this.$emit('updateNodeInfo', {
+            id: nodeId,
+            dots
+          })
           return {
             x: rect.left + closestNodeCoord.x - boardRect.left + ELPADDING,
-            y: rect.top + closestNodeCoord.y - boardRect.top + ELPADDING
+            y: rect.top + closestNodeCoord.y - boardRect.top + ELPADDING,
           }
         }
       },
       findClosestNode(nodes, point) {
         let closestNode = null;
         let minDistance = Infinity;
-
-        nodes.forEach(node => {
+        let pointIndex
+        nodes.forEach((node, index) => {
           // 计算每个节点与给定点的距离
           const distance = Math.sqrt(
             Math.pow(node.x - point.x, 2) + Math.pow(node.y - point.y, 2)
@@ -744,12 +768,14 @@
           if (distance < minDistance) {
             minDistance = distance;
             closestNode = node;
+            pointIndex = index
           }
         });
 
         return {
           x: closestNode.x,
-          y: closestNode.y
+          y: closestNode.y,
+          index: pointIndex
         };
       }
     },

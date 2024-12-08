@@ -1,3 +1,4 @@
+const ratio = window.devicePixelRatio || 1;
 // 传递图片url或者图片文件
 export const imageToCanvas = (image, canvasId) => {
   const canvas = document.getElementById(canvasId);
@@ -26,9 +27,12 @@ export const drawSelectBox = (selector, info) => {
   }else {
     canvas = selector
   }
-  canvas.width = width
-  canvas.height = height
   const ctx = canvas.getContext('2d');
+  canvas.width = width * ratio
+  canvas.height = height * ratio
+  canvas.style.width = width + 'px'
+  canvas.style.height = height + 'px'
+  ctx.scale(ratio, ratio)
   let offset = 0; // 虚线偏移
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -61,26 +65,35 @@ export const clearCanvas = (canvas) => {
 
 export const drawGrid = (selector, fillStyle = 'white') => {
   let canvas
-  if(typeof selector == 'string'){
+  if (typeof selector === 'string') {
     canvas = document.querySelector(selector)
-  }else {
+  } else {
     canvas = selector
   }
   const ctx = canvas.getContext('2d');
   
+  const ratio = window.devicePixelRatio || 1; // 获取设备像素比
   const cellSize = 15; // 网格单元格大小
   const width = canvas.width;
   const height = canvas.height;
-  ctx.strokeStyle = '#ccc';
-  // 设置背景为白色
-  ctx.fillStyle = fillStyle;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  // 使网格线条变得更细且清晰
-  ctx.translate(0.5, 0.5)
-  // 要使网格线条变得更细且清晰，可以尝试以下方法：
-  // 使用子像素渲染：设置 canvas 的宽度和高度时，可以使用小数值，以获得更高的分辨率。例如，将宽度和高度设置为 400.5，而不是整数值 400。这将触发子像素渲染，使线条看起来更加清晰。
-  // 使用反锯齿技术：在绘制网格线条之前，使用 ctx.translate(0.5, 0.5); 将绘图上下文进行微调。这会将线条的起点和终点移动半个像素，从而帮助消除锯齿效果。
 
+  // 设置Canvas的物理像素尺寸
+  canvas.width = width * ratio;
+  canvas.height = height * ratio;
+
+  // 设置Canvas显示尺寸为固定的宽度和高度
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+
+  // 使用缩放来适配高分辨率显示
+  ctx.scale(ratio, ratio);
+
+  // 通过平移消除锯齿效果
+  ctx.translate(0.5, 0.5);  // 微调位置，防止锯齿
+
+  // 设置背景颜色
+  ctx.fillStyle = fillStyle;
+  ctx.fillRect(0, 0, width, height);
 
   // 绘制垂直线
   for (let x = 0; x < width; x += cellSize) {
@@ -113,7 +126,7 @@ export const drawRoundRect = (selector, info) => {
   const defaultInfo = {
     width: 80,
     height: 50,
-    borderWidth: 8,
+    borderWidth: 2,
     cornerRadius: 0.3,
     fillColor: '#D6D6D6'
   }
@@ -170,8 +183,11 @@ export const drawRectangle = (selector, info) => {
   const ctx = canvas.getContext('2d');
   let {width, height, borderWidth, fillColor} = info
   let x = 0, y = 0
-  canvas.width = width
-  canvas.height = height
+  canvas.width = width * ratio
+  canvas.height = height * ratio
+  canvas.style.width = width + 'px'
+  canvas.style.height = height + 'px'
+  ctx.scale(ratio, ratio)
   const halfBorderWidth = borderWidth / 2; // 半个边框宽度
 
   ctx.lineWidth = borderWidth;
@@ -207,8 +223,11 @@ export const drawTriangle = (selector, info) => {
   }
   info = {...defaultInfo, ...info}
   let {width, height, borderWidth, fillColor} = info
-  canvas.width = width
-  canvas.height = height
+  canvas.width = width * ratio
+  canvas.height = height * ratio
+  canvas.style.width = width + 'px'
+  canvas.style.height = height + 'px'
+  ctx.scale(ratio, ratio)
   const x1 = width / 2; // 第一个顶点的x坐标
   const y1 = borderWidth; // 第一个顶点的y坐标
   const x2 = 0.5; // 第二个顶点的x坐标
@@ -243,11 +262,12 @@ export const drawCircle = (selector, info) => {
   }
   const ctx = canvas.getContext('2d');
   const defaultInfo = {
-    borderWidth: 6,
+    borderWidth: 2,
     fillColor: "#D6D6D6",
     width: 100,
     height: 100
   }
+  
   info = {...defaultInfo, ...info}
   let {borderWidth, fillColor, width, height} = info
   let radiusX = width / 2 - borderWidth / 2;
@@ -256,8 +276,11 @@ export const drawCircle = (selector, info) => {
   const centerY = height / 2; // 圆心的y坐标
   if(radiusX < 0) radiusX = 0
   if(radiusY < 0) radiusY = 0
-  canvas.width = width
-  canvas.height = height
+  canvas.width = width * ratio
+  canvas.height = height * ratio
+  canvas.style.width = width + 'px'
+  canvas.style.height = height + 'px'
+  ctx.scale(ratio, ratio)
   ctx.lineWidth = borderWidth;
   ctx.strokeStyle = 'black';
   ctx.fillStyle = fillColor;
@@ -290,8 +313,11 @@ export const drawRhombus = (selector, info) => {
   }
   info = {...defaultInfo, ...info}
   const {width, height, borderWidth, fillColor} = info
-  canvas.width = width
-  canvas.height = height
+  canvas.width = width * ratio
+  canvas.height = height * ratio
+  canvas.style.width = width + 'px'
+  canvas.style.height = height + 'px'
+  ctx.scale(ratio, ratio)
 
   const x1 = width / 2; // 第一个顶点的x坐标
   const y1 = 0 + borderWidth; // 第一个顶点的y坐标

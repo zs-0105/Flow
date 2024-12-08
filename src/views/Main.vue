@@ -79,8 +79,8 @@ import canvas from '@/utils/canvas.js'
           }
           if(this.animationFrameId) cancelAnimationFrame(this.animationFrameId)
           this.animationFrameId = requestAnimationFrame(() => {
-            this.$refs.dragCnavas.style.top = event.clientY - this.$refs.dragCnavas.height / 2 + 'px'
-            this.$refs.dragCnavas.style.left = event.clientX - this.$refs.dragCnavas.width / 2 + 'px'
+            this.$refs.dragCnavas.style.top = event.clientY - this.$refs.dragCnavas.clientWidth / 2 + 'px'
+            this.$refs.dragCnavas.style.left = event.clientX - this.$refs.dragCnavas.clientHeight / 2 + 'px'
           });
         }
       },

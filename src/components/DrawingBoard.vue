@@ -6,7 +6,7 @@
                 <canvas ref="drawing_board" class="drawing_board" :width="boardWidth" :height="boardHight"></canvas>
                 <!-- :is-selected="selectedNodesMap" -->
                 <node v-for="(value, key) in nodes" :ref="value.id" :key="key" :node-info="value" :is-editing="isEditing" :selectedNodesMap="selectedNodesMap" @setDragNodeInfo="setDragNodeInfo" @updateNodeInfo="updateNodeInfo" @updateMouseInfo="updateMouseInfo"></node>
-                <flow-link v-for="(value, key) in links" :ref="value.id" :key="key" :link-info="value" @updateNodeInfo="updateNodeInfo" @updateLinkInfo="updateLinkInfo" @updateMouseInfo="updateMouseInfo">
+                <flow-link v-for="(value, key) in links" :ref="value.id" :key="key" :link-info="value" :isDrawingLink="mouseInfo.isDrawingLink" @updateNodeInfo="updateNodeInfo" @updateLinkInfo="updateLinkInfo" @updateMouseInfo="updateMouseInfo">
                 </flow-link>
                 <textarea
                   ref="editInput"
@@ -104,10 +104,11 @@ import { ELPADDING } from '../constants/index'
           }
         } else {
           let { isOnNodeContent, isOnNodeBorder, isNodeSelected, isNearLinkStart, isNearLinkEnd, isDrawingLink, isNearLink } = this.mouseInfo
-          if (isDrawingLink) {
-            return 'crosshair'
-          }
-          if (this.isMouseOnBoard) {
+          // console.log(isDrawingLink)
+          // if (isDrawingLink) {
+          //   return 'crosshair'
+          // }
+          if (isDrawingLink || this.isMouseOnBoard) {
             return 'default'
           }
           if(isOnNodeBorder && !isNodeSelected){
@@ -117,7 +118,6 @@ import { ELPADDING } from '../constants/index'
           } else if(isOnNodeContent) {
             return 'move'
           }
-          console.log(isOnNodeContent, isNearLinkStart, isNearLinkEnd);
           
           if(isNearLinkStart || isNearLinkEnd) {
             return 'move'
@@ -260,16 +260,16 @@ import { ELPADDING } from '../constants/index'
       },
       createElement(info, el, event) {
         const canvasRect = this.$refs.drawing_board.getBoundingClientRect();
-        const mouseX = event.clientX - canvasRect.left - el.width / 2;
-        const mouseY = event.clientY - canvasRect.top - el.height / 2;
+        const mouseX = event.clientX - canvasRect.left - el.clientWidth / 2;
+        const mouseY = event.clientY - canvasRect.top - el.clientHeight / 2;
         delete info.info //删除默认绘制信息
         let data = {
           ...info,
           name: info.name,
           funName: info.funName,
           cname: info.cname,
-          width: el.width,
-          height: el.height,
+          width: el.clientWidth,
+          height: el.clientHeight,
           top: mouseY,
           left: mouseX,
           text: '',
@@ -572,7 +572,6 @@ import { ELPADDING } from '../constants/index'
         }else if (index == 1 || index == 7 || index == 8) {
           widthPercentageIncrease = (selectorOriginWidth - movedWidth) / selectorOriginWidth
         }
-        console.log(widthPercentageIncrease);
         let outLinks = JSON.parse(JSON.stringify(nodeInfo.outLinks))
         let inLinks = JSON.parse(JSON.stringify(nodeInfo.inLinks))
         outLinks.forEach((i, index) => {
@@ -903,7 +902,6 @@ import { ELPADDING } from '../constants/index'
                 y: top + offsetY
               }
             }
-            console.log(left + offsetX, top + offsetY);
             
             this.updateLinkInfo(tmpInfo)
           }
@@ -1016,7 +1014,6 @@ import { ELPADDING } from '../constants/index'
             })
           }
         }else {
-          debugger
           let { id } = datas
           // state.nodes[id][attr] = value
           let nodeInfo = this.nodes[id]

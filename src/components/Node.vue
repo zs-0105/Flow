@@ -14,13 +14,21 @@
         v-show="(isInContent || isOnBorder) && !isSelected"
         v-for="item in nodeInfo.dots"
         :key="item.id"
+        :class="{ 'active': item.active }"
+        @mousedown="dotMouseDown"
+        @mouseenter="isOnHoverDot = true"
+        @mouseleave="isOnHoverDot = false"
+        :style="{left: item.x - LINKDOTWIDTH + 'px', top: item.y - LINKDOTWIDTH + 'px', cursor: 'crosshair'}"
+      ></div>
+      <div class="hover_dot active"
+        v-for="item in particularPoints"
+        :key="item.id"
         @mousedown="dotMouseDown"
         @mouseenter="isOnHoverDot = true"
         @mouseleave="isOnHoverDot = false"
         :style="{left: item.x - LINKDOTWIDTH + 'px', top: item.y - LINKDOTWIDTH + 'px'}"
-      >
+      ></div>
       <!-- top:`${item.y}px`,left:`${item.x}px`, -->
-      </div>
       <canvas ref="nodeCanvas"
         class="node"
         :id="id"
@@ -36,6 +44,7 @@
 </template>
 
 <script>
+const ratio = window.devicePixelRatio || 1
 import canvas from '@/utils/canvas.js'
 import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
   export default {
@@ -104,7 +113,7 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
     },
     mounted() {
         this.init()
-        // this.initMouseEvent()
+        this.initEvent()
     },
     data () {
       return {
@@ -116,18 +125,24 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
         redDotY: '0px',
         isOnHoverDot: false,
         ELPADDING: ELPADDING,
-        LINKDOTWIDTH: LINKDOTWIDTH
+        LINKDOTWIDTH: LINKDOTWIDTH,
+        particularPoints: [],
       }
     },
     methods: {
         init() {
             let funName = this.nodeInfo.funName
             canvas[funName](this.$refs.nodeCanvas)
-            // this.dots = this.nodeInfo.dots
-            if(!this.nodeInfo.dots) {
+            if(!this.nodeInfo.dots || !this.nodeInfo.dots.length) {
               this.resetDots()
             }
             // this.$bus.$on('resetDots', this.resetDots)
+        },
+        initEvent() {
+          document.addEventListener('mouseup', () => {
+            this.nodeInfo.dots.forEach(i => i.active = false)
+            this.particularPoints = []
+          })
         },
         resetDots() {
           let width = this.width
@@ -137,22 +152,26 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
             {
               id: 1,
               x: width / 2,
-              y: 0 + LINKDOTWIDTH / 2
+              y: 0 + LINKDOTWIDTH / 2,
+              active: false
             },
             {
               id: 2,
               x: width - LINKDOTWIDTH / 2,
-              y: height / 2
+              y: height / 2,
+              active: false
             },
             {
               id: 3,
               x: width / 2,
-              y: height - LINKDOTWIDTH / 2
+              y: height - LINKDOTWIDTH / 2,
+              active: false
             },
             {
               id: 4,
               x: 0 + LINKDOTWIDTH / 2,
-              y: height / 2
+              y: height / 2,
+              active: false
             }
           ]
           this.$emit('updateNodeInfo', {
@@ -162,6 +181,7 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
 
         },
         nodeMousedown(event) {
+          console.log(this.nodeInfo);
           if(this.isOnBorder && !this.isSelected) {
             this.$bus.$emit('startDrawLink', event, this.id, (newLinkInfo) => {
               let outLinks = [...this.nodeInfo.outLinks]
@@ -198,8 +218,8 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
           let offsetX = event.clientX - rect.left;
           let offsetY = event.clientY - rect.top;
           const ctx = element.getContext('2d');
-          this.isInContent = ctx.isPointInPath(offsetX, offsetY);
-          this.isOnBorder = ctx.isPointInStroke(offsetX, offsetY);
+          this.isInContent = ctx.isPointInPath(offsetX * ratio, offsetY * ratio);
+          this.isOnBorder = ctx.isPointInStroke(offsetX * ratio, offsetY * ratio);
           if(this.isOnBorder && !this.isSelected) {
             this.redDotX = event.clientX - 3 + 'px';
             this.redDotY = event.clientY - 3 + 'px';
@@ -241,8 +261,8 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
           let rect = this.$refs.nodeCanvas.getBoundingClientRect();
           let offsetX = event.clientX - rect.left;
           let offsetY = event.clientY - rect.top;
-          let isInContent = ctx.isPointInPath(offsetX, offsetY)
-          // let isPointInStroke = ctx.isPointInPath(offsetX, offsetY)
+          let isInContent = ctx.isPointInPath(offsetX * ratio, offsetY * ratio)
+          // let isPointInStroke = ctx.isPointInPath(offsetX * ratio, offsetY * ratio)
           if (!isInContent) {
             this.$refs.nodeCanvas.style.pointerEvents = 'none';
             this.$refs.nodeContent.style.pointerEvents = 'none';
@@ -316,8 +336,10 @@ import { ELPADDING, LINKDOTWIDTH } from '../constants/index'
       border: 1px solid #067BEF;
       border-radius: 50%;
       background-color: #fff;
-      cursor: crosshair;
       z-index: 999;
+    }
+    .active {
+      background-color: #067BEF !important;
     }
     .text_content {
       position: absolute;

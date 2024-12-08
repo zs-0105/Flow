@@ -106,7 +106,8 @@ import canvas from '@/utils/canvas.js'
                     height: 16,
                     cornerRadius: 5,
                     borderWidth: 1
-                }
+                },
+                dots: []
             },
             {
                 name: 'circle',
@@ -117,7 +118,8 @@ import canvas from '@/utils/canvas.js'
                     borderWidth: 1,
                     width: 26,
                     height: 26
-                }
+                },
+                dots: []
             },
             {
                 name: 'triangle',
@@ -132,22 +134,26 @@ import canvas from '@/utils/canvas.js'
                     {
                         "id": 1,
                         "x": 50,
-                        "y": 1
+                        "y": 1,
+                        "active": false
                     },
                     {
                         "id": 2,
                         "x": 74,
-                        "y": 50
+                        "y": 50,
+                        "active": false
                     },
                     {
                         "id": 3,
                         "x": 50,
-                        "y": 99
+                        "y": 99,
+                        "active": false
                     },
                     {
                         "id": 4,
                         "x": 24,
-                        "y": 50
+                        "y": 50,
+                        "active": false
                     }
                 ]
             },
@@ -159,7 +165,8 @@ import canvas from '@/utils/canvas.js'
                     width: 26,
                     height: 20,
                     borderWidth: 1,
-                }
+                },
+                dots: []
             }
         ],
         currentCanvas:'',
@@ -194,8 +201,6 @@ import canvas from '@/utils/canvas.js'
         elementMouseEnter(canvasInfo, ref) {
             let el = this.$refs[ref]
             let {cname, funName} = canvasInfo
-            el.width = 100
-            el.height = 100
             canvas.clearCanvas(el)
             canvas[funName](el)
             this.currentCanvas = cname
